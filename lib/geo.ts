@@ -1,0 +1,109 @@
+import type { Leg, NearbyHit, Place, ScheduledStop } from './types';
+
+type LL = { lat: number; lng: number };
+const rad = (d: number) => (d * Math.PI) / 180;
+
+export function haversineKm(a: LL, b: LL) {
+  const x = Math.sin(rad(b.lat - a.lat) / 2) ** 2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(rad(b.lng - a.lng) / 2) ** 2;
+  return 12742 * Math.asin(Math.sqrt(x));
+}
+
+/** ระยะจากจุด p ถึงเส้นตรง a→b (กม.) — equirectangular, แม่นพอสำหรับระยะไม่กี่สิบกม. */
+export function pointToSegmentKm(p: LL, a: LL, b: LL) {
+  const k = Math.cos(rad(p.lat));
+  const ax = (a.lng - p.lng) * k, ay = a.lat - p.lat, bx = (b.lng - p.lng) * k, by = b.lat - p.lat;
+  const dx = bx - ax, dy = by - ay, L2 = dx * dx + dy * dy;
+  let t = L2 ? -(ax * dx + ay * dy) / L2 : 0;
+  t = Math.max(0, Math.min(1, t));
+  const x = ax + t * dx, y = ay + t * dy;
+  return Math.sqrt(x * x + y * y) * 111.32;
+}
+
+/** ค่าประมาณเมื่อยังไม่มีผล OSRM */
+export function estimateLeg(a: LL, b: LL): Leg {
+  const km = haversineKm(a, b) * 1.35;
+  const walk = km < 0.7;
+  const min = Math.max(1, Math.round(walk ? (km / 4.5) * 60 : (km / (km < 8 ? 22 : 40)) * 60 + 2));
+  return { km, min, walk };
+}
+
+export function parseOpenHours(s?: string | null) {
+  const m = (s || '').match(/(\d{1,2}):(\d{2})\D+(\d{1,2}):(\d{2})/);
+  return m ? { open: +m[1] * 60 + +m[2], close: +m[3] * 60 + +m[4] } : null;
+}
+
+export function schedule(places: Place[], dayStartMin = 540, legs?: (Leg | null)[]) {
+  let t = dayStartMin, km = 0, travelMin = 0;
+  const stops: ScheduledStop[] = places.map((p, i) => {
+    const oh = parseOpenHours(p.open_hours);
+    const waitMin = oh && t < oh.open ? oh.open - t : 0;
+    const startMin = t + waitMin;
+    const endMin = startMin + (p.duration_min || 30);
+    const next = places[i + 1];
+    const leg = next ? legs?.[i] ?? estimateLeg(p, next) : null;
+    if (leg) { km += leg.km; travelMin += leg.min; }
+    t = endMin + (leg?.min ?? 0);
+    return { place: p, index: i, startMin, endMin, waitMin, closesBeforeEnd: !!oh && endMin > oh.close, leg };
+  });
+  return { stops, km, travelMin, firstMin: stops[0]?.startMin ?? null, lastMin: stops.at(-1)?.endMin ?? null };
+}
+
+/** ฝั่ง client — production ใช้ RPC places_near_route กับ geometry จริง */
+export function nearbyAlongRoute(route: Place[], candidates: Place[], radiusKm: number, exclude: Set<string>): NearbyHit[] {
+  if (!route.length) return [];
+  return candidates
+    .filter((p) => !exclude.has(p.id))
+    .map((p) => {
+      let best = Infinity, segment = 0;
+      if (route.length === 1) best = haversineKm(p, route[0]);
+      else for (let i = 0; i < route.length - 1; i++) { const d = pointToSegmentKm(p, route[i], route[i + 1]); if (d < best) { best = d; segment = i; } }
+      return { place: p, distanceKm: best, segment };
+    })
+    .filter((h) => h.distanceKm <= radiusKm)
+    .sort((a, b) => a.distanceKm - b.distanceKm);
+}
+
+const isEvening = (p: Place) => (parseOpenHours(p.open_hours)?.open ?? 0) >= 15 * 60;
+
+/** ตรึงจุดแรก → nearest neighbour → 2-opt; สถานที่เปิดช่วงเย็นไปไว้ท้าย */
+export function autoOrder(places: Place[]): Place[] {
+  if (places.length < 3) return places;
+  const [first, ...rest] = places;
+  const evening = rest.filter(isEvening), pool = rest.filter((p) => !isEvening(p));
+  const route = [first];
+  while (pool.length) {
+    const last = route[route.length - 1];
+    let bi = 0, bd = Infinity;
+    pool.forEach((p, i) => { const d = haversineKm(last, p); if (d < bd) { bd = d; bi = i; } });
+    route.push(pool.splice(bi, 1)[0]);
+  }
+  const D = haversineKm;
+  for (let guard = 0, improved = true; improved && guard < 50; guard++) {
+    improved = false;
+    for (let i = 1; i < route.length - 1; i++)
+      for (let k = i + 1; k < route.length; k++) {
+        const a = route[i - 1], b = route[i], c = route[k], d = route[k + 1];
+        const delta = D(a, c) + (d ? D(b, d) : 0) - D(a, b) - (d ? D(c, d) : 0);
+        if (delta < -1e-6) { route.splice(i, k - i + 1, ...route.slice(i, k + 1).reverse()); improved = true; }
+      }
+  }
+  return [...route, ...evening];
+}
+
+export async function fetchOsrmRoute(points: LL[]) {
+  const base = process.env.NEXT_PUBLIC_OSRM_URL || 'https://router.project-osrm.org';
+  const q = points.map((p) => `${p.lng},${p.lat}`).join(';');
+  const r = await fetch(`${base}/route/v1/driving/${q}?overview=full&geometries=geojson`);
+  if (!r.ok) throw new Error('OSRM ' + r.status);
+  const j = await r.json();
+  const route = j.routes[0];
+  return {
+    line: route.geometry.coordinates.map(([lng, lat]: [number, number]) => [lat, lng] as [number, number]),
+    legs: route.legs.map((l: { distance: number; duration: number }) => ({ km: l.distance / 1000, min: Math.round(l.duration / 60), walk: false })) as Leg[],
+    geojson: route.geometry,
+  };
+}
+
+export const fmtKm = (km: number) => (km < 1 ? Math.round(km * 100) * 10 + ' ม.' : (km < 10 ? km.toFixed(1) : Math.round(km)) + ' กม.');
+export const fmtDuration = (m: number) => (m < 60 ? m + ' นาที' : Math.floor(m / 60) + ' ชม.' + (m % 60 ? ' ' + (m % 60) + ' นาที' : ''));
+export const fmtClock = (m: number) => String(Math.floor(m / 60) % 24).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');

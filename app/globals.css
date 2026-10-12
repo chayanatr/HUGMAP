@@ -1,0 +1,9 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.icon { font-family: 'Material Symbols Rounded'; line-height: 1; font-weight: normal; font-style: normal; display: inline-block; }
+.leaflet-container { font-family: var(--font-anuphan), sans-serif; background: #ECEEF3; }
+.leaflet-control-zoom { margin-top: 16px !important; margin-right: 16px !important; }
+.leaflet-control-attribution { font-size: 9px !important; }
+@media print { .no-print { display: none !important; } section { break-inside: avoid; } }

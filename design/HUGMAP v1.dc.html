@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Anuphan:wght@300;400;500;600;700&family=Bai+Jamjuree:wght@500;600;700&family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,300..500,0..1,0&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F8F6F1;color:#1C1B22;font-family:Anuphan,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:#333F96}a:hover{color:#1E255A}
+*{box-sizing:border-box}
+button,input,select,textarea{font-family:Anuphan,sans-serif}
+@media print{body{background:#fff}}
+</style>
+</helmet>
+<div style="height:{{ rootH }};display:flex;flex-direction:column;background:#F8F6F1">
+
+<sc-if value="{{ showHeader }}" hint-placeholder-val="{{ true }}">
+<header style="height:64px;flex-shrink:0;padding:0 {{ hPad }};display:flex;align-items:center;gap:28px;background:#FFFFFF;border-bottom:1px solid #E4DFD4;position:relative;z-index:900">
+  <div style="display:flex;align-items:center;gap:10px;flex-shrink:0">
+    <div style="width:32px;height:32px;border-radius:8px;background:#141938;color:#D8B76A;display:grid;place-items:center;font-family:'Bai Jamjuree';font-weight:700">C</div>
+    <span style="font-family:'Bai Jamjuree';font-weight:600;font-size:17px">HUGMAP</span>
+  </div>
+  <sc-if value="{{ showTopNav }}" hint-placeholder-val="{{ true }}">
+    <nav style="display:flex;gap:2px;height:100%">
+      <sc-for list="{{ navItems }}" as="n" hint-placeholder-count="4">
+        <button onClick="{{ n.go }}" style="height:100%;padding:0 14px;border:0;background:none;cursor:pointer;white-space:nowrap;font-size:{{ navFont }};font-weight:{{ n.weight }};color:{{ n.color }};box-shadow:inset 0 -2px 0 {{ n.bar }};display:flex;align-items:center;gap:8px" style-hover="color:#333F96">{{ n.label }}</button>
+      </sc-for>
+    </nav>
+  </sc-if>
+  <div style="margin-left:auto;display:flex;align-items:center;gap:10px">
+    <sc-if value="{{ isNotMobile }}" hint-placeholder-val="{{ true }}"><span title="{{ apiTitle }}" style="display:flex;align-items:center;gap:6px;height:30px;padding:0 10px;border-radius:999px;background:#F1EEE7;font-size:12px;color:#45423C;white-space:nowrap"><span style="width:8px;height:8px;border-radius:50%;background:{{ apiDot }}"></span>{{ apiNoteShown }}</span></sc-if>
+    <span style="font-size:13px;color:#6E6A62;white-space:nowrap">{{ headerNote }}</span>
+    <div style="width:36px;height:36px;border-radius:50%;background:#4250AE;color:#fff;display:grid;place-items:center;font-size:13px;font-weight:600">นภ</div>
+  </div>
+</header>
+</sc-if>
+
+<main style="flex:1;min-height:0;overflow:{{ mainOverflow }};position:relative">
+
+<!-- ============ PLAN ============ -->
+<sc-if value="{{ isPlan }}" hint-placeholder-val="{{ true }}">
+<div style="display:grid;grid-template-columns:{{ planCols }};height:{{ fillH }};min-height:0">
+  <div style="position:{{ mapPos }};top:0;z-index:1;height:{{ planMapH }};padding:{{ mapPad }}">
+    <div style="position:relative;height:100%;border-radius:{{ mapRadius }};overflow:hidden;background:#EEF0FA">
+      <x-import component-from-global-scope="lao-map" from="./lao-map.js" theme="{{ mapTheme }}" mode="route" zoom="1" stops="{{ planStopsJson }}" nearby="{{ planNearbyJson }}" fit-key="{{ planFitKey }}" pad-top="90" hint-size="100%,100%" style="position:absolute;inset:0"></x-import>
+      <div style="position:absolute;top:12px;left:12px;z-index:500;padding:10px 14px;background:#FFFFFF;border-radius:12px;box-shadow:0 4px 16px rgba(20,25,56,.12);display:flex;gap:20px">
+        <div><div style="font-size:11px;color:#6E6A62">ระยะทาง</div><div style="font-family:'Bai Jamjuree';font-weight:600;font-size:18px">{{ plan.km }}</div></div>
+        <div><div style="font-size:11px;color:#6E6A62">เดินทาง · {{ planSrc }}</div><div style="font-family:'Bai Jamjuree';font-weight:600;font-size:18px">{{ plan.travel }}</div></div>
+        <div><div style="font-size:11px;color:#6E6A62">ใกล้เส้นทาง</div><div style="font-family:'Bai Jamjuree';font-weight:600;font-size:18px">{{ plan.nearbyCount }} แห่ง</div></div>
+      </div>
+    </div>
+  </div>
+  <div style="overflow:{{ colOverflow }};padding:{{ colPad }};display:flex;flex-direction:column;gap:20px;background:#F8F6F1;position:relative;z-index:2">
+    <div style="display:flex;flex-direction:column;gap:4px">
+      <div style="font-size:13px;color:#B08A3E;font-weight:600;letter-spacing:.04em">{{ trip.code }} · {{ trip.client }}</div>
+      <div style="font-size:15px;color:#45423C">{{ trip.name }}</div>
+      <div style="display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-top:4px">
+        <div style="font-family:'Bai Jamjuree';font-weight:600;font-size:{{ dayTitleSize }};line-height:1.2">วันที่ {{ plan.dayNo }}</div>
+        <div style="font-size:16px;color:#45423C">{{ plan.date }} · {{ plan.span }}</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <sc-for list="{{ dayTabs }}" as="d" hint-placeholder-count="2">
+        <button onClick="{{ d.go }}" title="วันที่ {{ d.n }}" style="width:44px;height:44px;border-radius:50%;border:1px solid {{ d.border }};background:{{ d.bg }};color:{{ d.fg }};font-size:15px;font-weight:600;cursor:pointer">{{ d.n }}</button>
+      </sc-for>
+      <button onClick="{{ addDay }}" title="เพิ่มวัน" style="width:44px;height:44px;border-radius:50%;border:1px dashed #CFC8B9;background:transparent;color:#333F96;font-family:'Material Symbols Rounded';font-size:20px;cursor:pointer">add</button>
+      <div style="margin-left:auto;display:flex;gap:8px">
+        <sc-if value="{{ canRemoveDay }}" hint-placeholder-val="{{ false }}">
+          <button onClick="{{ removeDay }}" style="height:44px;padding:0 12px;border:0;border-radius:10px;background:transparent;color:oklch(0.5 0.16 25);font-size:14px;cursor:pointer">ลบวันนี้</button>
+        </sc-if>
+        <button onClick="{{ autoOrder }}" style="height:44px;padding:0 14px;border:0;border-radius:10px;background:#F4ECD9;color:#6B5320;font-size:14px;font-weight:500;display:flex;align-items:center;gap:6px;cursor:pointer" style-hover="background:#EFE2C4"><span style="font-family:'Material Symbols Rounded';font-size:18px">auto_awesome</span>จัดลำดับอัตโนมัติ</button>
+      </div>
+    </div>
+
+    <div style="position:relative">
+      <div style="height:48px;padding:0 14px;border:1px solid #CFC8B9;border-radius:12px;background:#FFFFFF;display:flex;align-items:center;gap:10px">
+        <span style="font-family:'Material Symbols Rounded';font-size:20px;color:#6E6A62">search</span>
+        <input value="{{ addQ }}" onChange="{{ onAddQ }}" placeholder="ค้นหาสถานที่เพื่อเพิ่มในวันที่ {{ plan.dayNo }}…" style="flex:1;min-width:0;height:100%;border:0;outline:none;background:transparent;font-size:15px;color:#1C1B22">
+      </div>
+      <sc-if value="{{ hasAddResults }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;left:0;right:0;top:54px;z-index:50;background:#FFFFFF;border:1px solid #E4DFD4;border-radius:12px;box-shadow:0 12px 40px rgba(20,25,56,.18);padding:6px;display:flex;flex-direction:column">
+          <sc-for list="{{ addResults }}" as="r" hint-placeholder-count="3">
+            <button onClick="{{ r.add }}" style="display:flex;align-items:center;gap:10px;padding:10px;border:0;background:transparent;border-radius:8px;text-align:left;cursor:pointer;min-height:48px" style-hover="background:#F1EEE7">
+              <span style="width:30px;height:30px;border-radius:50%;background:{{ r.color }};color:#fff;display:grid;place-items:center;font-family:'Material Symbols Rounded';font-size:17px;flex-shrink:0">{{ r.icon }}</span>
+              <span style="flex:1;min-width:0;display:flex;flex-direction:column"><span style="font-size:15px;font-weight:600;color:#1C1B22">{{ r.name }}</span><span style="font-size:12px;color:#6E6A62">{{ r.catLabel }} · {{ r.cityLabel }}</span></span>
+              <span style="font-size:13px;color:#333F96;font-weight:600">+ เพิ่ม</span>
+            </button>
+          </sc-for>
+        </div>
+      </sc-if>
+    </div>
+
+    <sc-if value="{{ planEmpty }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:32px;border:1px dashed #CFC8B9;border-radius:16px;text-align:center;color:#6E6A62;font-size:15px;line-height:1.7">ยังไม่มีจุดแวะในวันนี้<br>ค้นหาสถานที่ด้านบน หรือเพิ่มจากหน้าแผนที่สถานที่</div>
+    </sc-if>
+
+    <div style="display:flex;flex-direction:column">
+      <sc-for list="{{ planItems }}" as="s" hint-placeholder-count="5">
+        <div draggable="true" onDragStart="{{ s.dragStart }}" onDragOver="{{ s.dragOver }}" onDrop="{{ s.drop }}" onDragEnd="{{ dragEnd }}" style="display:grid;grid-template-columns:52px 20px minmax(0,1fr) auto;gap:12px;align-items:start;border-radius:12px;background:{{ s.rowBg }};box-shadow:{{ s.rowLine }}">
+          <div style="display:flex;flex-direction:column;padding-top:2px">
+            <span style="font-family:'Bai Jamjuree';font-weight:600;font-size:15px;font-variant-numeric:tabular-nums">{{ s.time }}</span>
+            <sc-if value="{{ s.hasWait }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;color:#6E6A62;line-height:1.4">{{ s.wait }}</span></sc-if>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;align-self:stretch"><div style="width:22px;height:22px;border-radius:50%;background:#333F96;color:#fff;display:grid;place-items:center;font-size:11px;font-weight:700;margin-top:2px;flex-shrink:0">{{ s.n }}</div><div style="flex:1;width:2px;background:{{ s.lineColor }}"></div></div>
+          <div style="padding-bottom:14px;display:flex;flex-direction:column;gap:2px;min-width:0">
+            <div style="font-size:17px;font-weight:600;line-height:1.4">{{ s.name }}</div>
+            <div style="font-size:13px;color:#6E6A62;display:flex;align-items:center;gap:6px;flex-wrap:wrap"><span style="width:8px;height:8px;border-radius:50%;background:{{ s.color }}"></span>{{ s.catLabel }} · {{ s.dur }} · ถึง {{ s.end }}</div>
+            <sc-if value="{{ s.late }}" hint-placeholder-val="{{ false }}"><div style="font-size:12px;color:oklch(0.5 0.16 25);display:flex;align-items:center;gap:4px"><span style="font-family:'Material Symbols Rounded';font-size:15px">schedule</span>{{ s.lateMsg }}</div></sc-if>
+            <sc-if value="{{ s.hasLeg }}" hint-placeholder-val="{{ true }}"><div style="font-size:12px;color:#6E6A62;display:flex;align-items:center;gap:4px;margin-top:6px"><span style="font-family:'Material Symbols Rounded';font-size:16px">{{ s.mode }}</span>{{ s.leg }}</div></sc-if>
+            <sc-if value="{{ s.hasTip }}" hint-placeholder-val="{{ false }}">
+              <div style="margin-top:8px;display:flex;align-items:center;gap:10px;padding:8px 8px 8px 10px;border:1px dashed #D8B76A;border-radius:10px;background:#FBF7EC">
+                <span style="font-family:'Material Symbols Rounded';font-size:18px;color:#B08A3E">near_me</span>
+                <div style="flex:1;font-size:13px;line-height:1.5;min-width:0"><b style="font-weight:600">ระหว่างทาง:</b> {{ s.tipName }} · {{ s.tipCat }} · ห่าง {{ s.tipOff }}</div>
+                <button onClick="{{ s.tipAdd }}" style="height:36px;padding:0 10px;border:0;border-radius:8px;background:transparent;color:#333F96;font-size:13px;font-weight:600;cursor:pointer;flex-shrink:0" style-hover="background:#F4ECD9">+ เพิ่ม</button>
+              </div>
+            </sc-if>
+          </div>
+          <div style="display:flex;gap:2px;align-items:center">
+            <sc-if value="{{ isMobile }}" hint-placeholder-val="{{ false }}">
+              <button onClick="{{ s.up }}" title="เลื่อนขึ้น" style="width:44px;height:44px;border:0;background:transparent;color:#6E6A62;font-family:'Material Symbols Rounded';font-size:20px;cursor:pointer">arrow_upward</button>
+            </sc-if>
+            <sc-if value="{{ isNotMobile }}" hint-placeholder-val="{{ true }}">
+              <span title="ลากเพื่อเรียงลำดับ" style="width:32px;height:32px;display:grid;place-items:center;color:#CFC8B9;font-family:'Material Symbols Rounded';font-size:20px;cursor:grab">drag_indicator</span>
+            </sc-if>
+            <button onClick="{{ s.remove }}" title="นำออก" style="width:{{ iconBtn }};height:{{ iconBtn }};border:0;border-radius:8px;background:transparent;color:#6E6A62;font-family:'Material Symbols Rounded';font-size:19px;cursor:pointer" style-hover="background:#F1EEE7;color:oklch(0.5 0.16 25)">close</button>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:12px;padding:16px;border-radius:16px;background:#FFFFFF;border:1px solid #E4DFD4">
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <div style="font-size:16px;font-weight:600">แนะนำใกล้เส้นทาง</div>
+        <div style="margin-left:auto;display:flex;gap:2px;padding:3px;border-radius:10px;background:#F1EEE7">
+          <sc-for list="{{ radiusOpts }}" as="o" hint-placeholder-count="5">
+            <button onClick="{{ o.pick }}" style="height:36px;padding:0 10px;border:0;border-radius:8px;background:{{ o.bg }};color:{{ o.fg }};font-size:13px;font-weight:{{ o.weight }};box-shadow:{{ o.shadow }};cursor:pointer">{{ o.label }}</button>
+          </sc-for>
+        </div>
+      </div>
+      <sc-if value="{{ hasPlanNearby }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex;flex-direction:column">
+          <sc-for list="{{ planNearbyList }}" as="p" hint-placeholder-count="4">
+            <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid #F1EEE7">
+              <div style="width:32px;height:32px;border-radius:50%;background:{{ p.color }};color:#fff;display:grid;place-items:center;font-family:'Material Symbols Rounded';font-size:18px;flex-shrink:0">{{ p.icon }}</div>
+              <div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:600">{{ p.name }}</div><div style="font-size:12px;color:#6E6A62">{{ p.catLabel }} · ห่างเส้นทาง {{ p.off }} · {{ p.between }}</div></div>
+              <button onClick="{{ p.add }}" style="height:36px;padding:0 12px;border:0;border-radius:8px;background:#EEF0FA;color:#283278;font-size:13px;font-weight:500;cursor:pointer;flex-shrink:0" style-hover="background:#DDE1F5">+ เพิ่ม</button>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+      <sc-if value="{{ noPlanNearby }}" hint-placeholder-val="{{ false }}">
+        <div style="font-size:13px;color:#6E6A62">ไม่พบสถานที่ในรัศมีนี้ ลองขยายรัศมี</div>
+      </sc-if>
+    </div>
+
+    <div style="display:flex;gap:8px;padding-bottom:8px">
+      <button onClick="{{ copyLink }}" style="flex:1;height:48px;border:1px solid #CFC8B9;border-radius:12px;background:#FFFFFF;font-size:15px;font-weight:500;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer" style-hover="background:#F1EEE7"><span style="font-family:'Material Symbols Rounded';font-size:19px">link</span>แชร์ลิงก์</button>
+      <button onClick="{{ goSummary }}" style="flex:2;height:48px;border:0;border-radius:12px;background:#333F96;color:#fff;font-size:15px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer" style-hover="background:#283278">ดูสรุปเส้นทาง<span style="font-family:'Material Symbols Rounded';font-size:19px">arrow_forward</span></button>
+    </div>
+  </div>
+</div>
+</sc-if>
+
+<!-- ============ PLACES ============ -->
+<sc-if value="{{ isPlaces }}" hint-placeholder-val="{{ false }}">
+<div style="display:grid;grid-template-columns:{{ placesCols }};height:{{ fillH }};min-height:0">
+  <div style="order:{{ listOrder }};overflow:{{ colOverflow }};background:#FFFFFF;border-right:1px solid #E4DFD4;display:flex;flex-direction:column">
+    <div style="padding:20px {{ sidePad }} 14px;display:flex;flex-direction:column;gap:12px;border-bottom:1px solid #E4DFD4;position:sticky;top:0;background:#FFFFFF;z-index:5">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="flex:1;min-width:0"><div style="font-family:'Bai Jamjuree';font-weight:600;font-size:22px;white-space:nowrap">สถานที่ท่องเที่ยว</div><div style="font-size:13px;color:#6E6A62">{{ placesCount }} แห่ง · {{ cityLabel }}</div></div>
+        <button onClick="{{ newPlace }}" title="เพิ่มสถานที่" style="height:44px;padding:0 12px;border:0;border-radius:10px;background:#333F96;color:#fff;font-size:14px;font-weight:600;display:flex;align-items:center;gap:6px;cursor:pointer;flex-shrink:0" style-hover="background:#283278"><span style="font-family:'Material Symbols Rounded';font-size:19px">add_location_alt</span>{{ newPlaceLabel }}</button>
+      </div>
+      <div style="height:44px;padding:0 12px;border:1px solid #CFC8B9;border-radius:10px;display:flex;align-items:center;gap:10px">
+        <span style="font-family:'Material Symbols Rounded';font-size:20px;color:#6E6A62">search</span>
+        <input value="{{ q }}" onChange="{{ onQ }}" placeholder="ค้นหาชื่อสถานที่…" style="flex:1;min-width:0;height:100%;border:0;outline:none;background:transparent;font-size:15px">
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:2px;padding:3px;border-radius:10px;background:#F1EEE7">
+        <sc-for list="{{ cityOpts }}" as="o" hint-placeholder-count="4">
+          <button onClick="{{ o.pick }}" style="flex:1 1 auto;white-space:nowrap;height:36px;padding:0 8px;border:0;border-radius:8px;background:{{ o.bg }};color:{{ o.fg }};font-size:13px;font-weight:{{ o.weight }};box-shadow:{{ o.shadow }};cursor:pointer">{{ o.label }}</button>
+        </sc-for>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px">
+        <sc-for list="{{ catChips }}" as="c" hint-placeholder-count="9">
+          <button onClick="{{ c.toggle }}" style="height:34px;padding:0 12px 0 5px;border-radius:999px;border:1px solid {{ c.border }};background:{{ c.bg }};color:{{ c.fg }};display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
+            <span style="width:24px;height:24px;border-radius:50%;background:{{ c.color }};color:#fff;display:grid;place-items:center;font-family:'Material Symbols Rounded';font-size:15px">{{ c.icon }}</span>{{ c.label }}
+          </button>
+        </sc-for>
+      </div>
+    </div>
+    <div style="padding:12px {{ sidePad }} 24px;display:flex;flex-direction:column;gap:10px">
+      <sc-for list="{{ placeCards }}" as="p" hint-placeholder-count="6">
+        <div onClick="{{ p.select }}" style="display:flex;gap:12px;padding:12px;border-radius:14px;background:#FFFFFF;border:1px solid {{ p.border }};box-shadow:{{ p.shadow }};cursor:pointer" style-hover="border-color:#8F9AD9">
+          <div style="width:72px;height:72px;border-radius:10px;flex-shrink:0;background:repeating-linear-gradient(135deg,#F1EEE7 0 6px,#E4DFD4 6px 7px);display:grid;place-items:center;font:10px ui-monospace,monospace;color:#6E6A62">photo</div>
+          <div style="display:flex;flex-direction:column;gap:3px;min-width:0;flex:1">
+            <div style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:{{ p.color }}"><span style="font-family:'Material Symbols Rounded';font-size:16px">{{ p.icon }}</span>{{ p.catLabel }}<sc-if value="{{ p.inTrip }}" hint-placeholder-val="{{ false }}"><span style="margin-left:auto;padding:2px 8px;border-radius:999px;background:#EEF0FA;color:#283278;font-weight:500">ในเส้นทาง</span></sc-if></div>
+            <div style="font-size:16px;font-weight:600;line-height:1.35">{{ p.name }}</div>
+            <div style="font-size:13px;color:#6E6A62;line-height:1.5">{{ p.meta }}</div>
+          </div>
+        </div>
+      </sc-for>
+      <sc-if value="{{ noPlaces }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:28px;text-align:center;color:#6E6A62;font-size:14px">ไม่พบสถานที่ตามตัวกรอง</div>
+      </sc-if>
+    </div>
+  </div>
+  <div style="position:{{ mapPos }};top:0;z-index:1;height:{{ placesMapH }};order:{{ mapOrder }}">
+    <div style="position:relative;height:100%;background:#EEF0FA">
+      <x-import component-from-global-scope="lao-map" from="./lao-map.js" theme="{{ mapTheme }}" mode="places" zoom="1" places="{{ placesJson }}" focus="{{ focusJson }}" fit-key="{{ placesFitKey }}" hint-size="100%,100%" style="position:absolute;inset:0"></x-import>
+      <sc-if value="{{ hasSel }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;left:12px;right:12px;bottom:12px;z-index:500;max-width:520px;background:#FFFFFF;border-radius:16px;box-shadow:0 12px 40px rgba(20,25,56,.22);padding:16px;display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;align-items:flex-start;gap:12px">
+            <div style="width:40px;height:40px;border-radius:50%;background:{{ sel.color }};color:#fff;display:grid;place-items:center;font-family:'Material Symbols Rounded';font-size:22px;flex-shrink:0">{{ sel.icon }}</div>
+            <div style="flex:1;min-width:0"><div style="font-size:18px;font-weight:600;line-height:1.35">{{ sel.name }}</div><div style="font-size:13px;color:#6E6A62">{{ sel.catLabel }} · {{ sel.cityLabel }} · {{ sel.coords }}</div></div>
+            <button onClick="{{ clearSel }}" style="width:36px;height:36px;border:0;border-radius:8px;background:transparent;font-family:'Material Symbols Rounded';font-size:20px;color:#6E6A62;cursor:pointer">close</button>
+          </div>
+          <div style="font-size:14px;color:#45423C;line-height:1.6">{{ sel.info }}</div>
+          <sc-if value="{{ sel.hasDesc }}" hint-placeholder-val="{{ false }}"><div style="font-size:14px;color:#45423C;line-height:1.6">{{ sel.desc }}</div></sc-if>
+          <div style="display:flex;gap:8px">
+            <button onClick="{{ sel.edit }}" style="height:44px;padding:0 16px;border:1px solid #CFC8B9;border-radius:10px;background:#FFFFFF;font-size:14px;font-weight:500;display:flex;align-items:center;gap:6px;cursor:pointer"><span style="font-family:'Material Symbols Rounded';font-size:18px">edit</span>แก้ไข</button>
+            <button onClick="{{ sel.addToTrip }}" style="flex:1;height:44px;border:0;border-radius:10px;background:#333F96;color:#fff;font-size:14px;font-weight:600;cursor:pointer">{{ sel.addLabel }}</button>
+          </div>
+        </div>
+      </sc-if>
+    </div>
+  </div>
+</div>
+</sc-if>
+
+<!-- ============ FORM ============ -->
+<sc-if value="{{ isForm }}" hint-placeholder-val="{{ false }}">
+<div style="max-width:1200px;margin:0 auto;padding:{{ pagePad }};display:flex;flex-direction:column;gap:20px">
+  <div style="display:flex;align-items:center;gap:12px">
+    <button onClick="{{ cancelForm }}" style="width:44px;height:44px;border:1px solid #CFC8B9;border-radius:10px;background:#FFFFFF;font-family:'Material Symbols Rounded';font-size:22px;cursor:pointer">arrow_back</button>
+    <div><div style="font-size:13px;color:#6E6A62">จัดการสถานที่</div><div style="font-family:'Bai Jamjuree';font-weight:600;font-size:26px;line-height:1.3">{{ formTitle }}</div></div>
+  </div>
+  <div style="display:grid;grid-template-columns:{{ formCols }};gap:20px;align-items:start">
+    <div style="padding:{{ cardPad }};border-radius:16px;background:#FFFFFF;border:1px solid #E4DFD4;display:flex;flex-direction:column;gap:18px">
+      <label style="display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:500">ชื่อสถานที่ *
+        <input value="{{ form.name }}" onChange="{{ onField.name }}" placeholder="เช่น วัดเชียงทอง" style="height:44px;padding:0 14px;border:1px solid {{ err.nameBorder }};border-radius:10px;font-size:15px;color:#1C1B22;background:#fff;outline:none" style-focus="border-color:#333F96;box-shadow:0 0 0 3px #DDE1F5">
+        <sc-if value="{{ err.hasName }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:oklch(0.5 0.16 25);font-weight:400">{{ err.name }}</span></sc-if>
+      </label>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <div style="font-size:14px;font-weight:500">หมวด *</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">
+          <sc-for list="{{ formCats }}" as="c" hint-placeholder-count="9">
+            <button onClick="{{ c.pick }}" style="height:40px;padding:0 12px 0 6px;border-radius:999px;border:1px solid {{ c.border }};background:{{ c.bg }};color:{{ c.fg }};display:flex;align-items:center;gap:6px;font-size:14px;cursor:pointer">
+              <span style="width:26px;height:26px;border-radius:50%;background:{{ c.color }};color:#fff;display:grid;place-items:center;font-family:'Material Symbols Rounded';font-size:16px">{{ c.icon }}</span>{{ c.label }}
+            </button>
+          </sc-for>
+        </div>
+      </div>
+      <label style="display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:500">เมือง / แขวง
+        <select value="{{ form.city }}" onChange="{{ onField.city }}" style="height:44px;padding:0 12px;border:1px solid #CFC8B9;border-radius:10px;font-size:15px;background:#fff;color:#1C1B22">
+          <sc-for list="{{ cityList }}" as="c" hint-placeholder-count="5"><option value="{{ c.key }}">{{ c.label }}</option></sc-for>
+        </select>
+      </label>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <div style="font-size:14px;font-weight:500">พิกัด * <span style="font-weight:400;color:#6E6A62">· คลิกบนแผนที่เพื่อปักหมุด</span></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <input value="{{ form.lat }}" onChange="{{ onField.lat }}" inputmode="decimal" placeholder="ละติจูด" style="height:44px;padding:0 14px;border:1px solid {{ err.latBorder }};border-radius:10px;font-size:15px;font-variant-numeric:tabular-nums;outline:none" style-focus="border-color:#333F96;box-shadow:0 0 0 3px #DDE1F5">
+          <input value="{{ form.lng }}" onChange="{{ onField.lng }}" inputmode="decimal" placeholder="ลองจิจูด" style="height:44px;padding:0 14px;border:1px solid {{ err.lngBorder }};border-radius:10px;font-size:15px;font-variant-numeric:tabular-nums;outline:none" style-focus="border-color:#333F96;box-shadow:0 0 0 3px #DDE1F5">
+        </div>
+        <sc-if value="{{ err.hasCoord }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:oklch(0.5 0.16 25)">{{ err.coord }}</span></sc-if>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px">
+        <label style="display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:500">เวลาเปิด–ปิด
+          <input value="{{ form.open }}" onChange="{{ onField.open }}" placeholder="08:00–17:00" style="height:44px;padding:0 14px;border:1px solid #CFC8B9;border-radius:10px;font-size:15px;outline:none" style-focus="border-color:#333F96;box-shadow:0 0 0 3px #DDE1F5">
+        </label>
+        <label style="display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:500">ค่าเข้า
+          <input value="{{ form.fee }}" onChange="{{ onField.fee }}" placeholder="20,000 กีบ" style="height:44px;padding:0 14px;border:1px solid #CFC8B9;border-radius:10px;font-size:15px;outline:none" style-focus="border-color:#333F96;box-shadow:0 0 0 3px #DDE1F5">
+        </label>
+        <label style="display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:500">เวลาแนะนำ (นาที)
+          <input value="{{ form.dur }}" onChange="{{ onField.dur }}" inputmode="numeric" style="height:44px;padding:0 14px;border:1px solid {{ err.durBorder }};border-radius:10px;font-size:15px;outline:none" style-focus="border-color:#333F96;box-shadow:0 0 0 3px #DDE1F5">
+        </label>
+      </div>
+      <label style="display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:500">รายละเอียด
+        <textarea value="{{ form.desc }}" onChange="{{ onField.desc }}" rows="3" placeholder="ข้อมูลสำหรับไกด์และลูกค้า" style="padding:12px 14px;border:1px solid #CFC8B9;border-radius:10px;font-size:15px;line-height:1.6;resize:vertical;outline:none" style-focus="border-color:#333F96;box-shadow:0 0 0 3px #DDE1F5"></textarea>
+      </label>
+      <div style="height:96px;border:1.5px dashed #CFC8B9;border-radius:12px;display:flex;align-items:center;justify-content:center;gap:8px;color:#6E6A62;font-size:14px;background:repeating-linear-gradient(135deg,#FBFAF7 0 8px,#F6F3EC 8px 9px)"><span style="font-family:'Material Symbols Rounded';font-size:22px">add_photo_alternate</span>ลากรูปมาวาง หรือคลิกเพื่อเลือก (สูงสุด 5 รูป)</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;padding-top:4px;border-top:1px solid #F1EEE7">
+        <sc-if value="{{ isEditing }}" hint-placeholder-val="{{ false }}">
+          <button onClick="{{ deletePlace }}" style="height:44px;padding:0 16px;border:0;border-radius:10px;background:transparent;color:oklch(0.5 0.16 25);font-size:14px;font-weight:500;cursor:pointer" style-hover="background:#FBEDEA">ลบสถานที่</button>
+        </sc-if>
+        <div style="margin-left:auto;display:flex;gap:8px">
+          <button onClick="{{ cancelForm }}" style="height:44px;padding:0 16px;border:0;border-radius:10px;background:transparent;color:#333F96;font-size:15px;font-weight:500;cursor:pointer" style-hover="background:#EEF0FA">ยกเลิก</button>
+          <button onClick="{{ savePlace }}" style="height:44px;padding:0 20px;border:0;border-radius:10px;background:#333F96;color:#fff;font-size:15px;font-weight:600;cursor:pointer" style-hover="background:#283278">บันทึกสถานที่</button>
+        </div>
+      </div>
+    </div>
+    <div style="position:{{ formMapPos }};top:16px;height:{{ formMapH }};border-radius:16px;overflow:hidden;background:#EEF0FA;border:1px solid #E4DFD4">
+      <x-import component-from-global-scope="lao-map" from="./lao-map.js" theme="{{ mapTheme }}" mode="pick" zoom="1" pin="{{ pinJson }}" places="{{ formPlacesJson }}" focus="{{ pinFocusJson }}" fit-key="{{ formFitKey }}" hint-size="100%,100%" style="position:absolute;inset:0"></x-import>
+      <div style="position:absolute;top:12px;left:12px;right:12px;z-index:500;padding:10px 12px;border-radius:10px;background:#FFFFFF;box-shadow:0 4px 16px rgba(20,25,56,.12);font-size:13px;color:#45423C;display:flex;gap:8px;align-items:center"><span style="font-family:'Material Symbols Rounded';font-size:18px;color:#333F96">touch_app</span>คลิกบนแผนที่เพื่อปักหมุด หรือลากหมุดเพื่อปรับตำแหน่ง</div>
+    </div>
+  </div>
+</div>
+</sc-if>
+
+<!-- ============ SUMMARY ============ -->
+<sc-if value="{{ isSummary }}" hint-placeholder-val="{{ false }}">
+<div style="max-width:1120px;margin:0 auto;padding:{{ pagePad }};display:flex;flex-direction:column;gap:36px">
+  <div style="display:flex;flex-direction:column;gap:16px;padding-bottom:28px;border-bottom:1px solid #E4DFD4">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <span style="font-size:13px;color:#B08A3E;font-weight:600;letter-spacing:.06em">{{ trip.code }} · สรุปเส้นทาง</span>
+      <sc-if value="{{ notPrinting }}" hint-placeholder-val="{{ true }}">
+        <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
+          <button onClick="{{ goPlan }}" style="height:44px;padding:0 14px;border:0;border-radius:10px;background:transparent;color:#333F96;font-size:14px;font-weight:500;display:flex;align-items:center;gap:6px;cursor:pointer" style-hover="background:#EEF0FA"><span style="font-family:'Material Symbols Rounded';font-size:18px">edit</span>แก้ไขเส้นทาง</button>
+          <button onClick="{{ copyLink }}" style="height:44px;padding:0 14px;border:1px solid #CFC8B9;border-radius:10px;background:#FFFFFF;font-size:14px;font-weight:500;display:flex;align-items:center;gap:6px;cursor:pointer"><span style="font-family:'Material Symbols Rounded';font-size:18px">link</span>คัดลอกลิงก์ลูกค้า</button>
+          <button onClick="{{ printPdf }}" style="height:44px;padding:0 16px;border:0;border-radius:10px;background:#333F96;color:#fff;font-size:14px;font-weight:600;display:flex;align-items:center;gap:6px;cursor:pointer" style-hover="background:#283278"><span style="font-family:'Material Symbols Rounded';font-size:18px">picture_as_pdf</span>พิมพ์ / PDF</button>
+        </div>
+      </sc-if>
+    </div>
+    <h1 style="margin:0;font-family:'Bai Jamjuree';font-weight:600;font-size:{{ sumTitleSize }};line-height:1.2;text-wrap:pretty">{{ trip.name }}</h1>
+    <div style="font-size:16px;color:#45423C">{{ trip.client }} · {{ trip.pax }} ท่าน · {{ trip.range }}</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-top:8px">
+      <sc-for list="{{ sumStats }}" as="t" hint-placeholder-count="4">
+        <div style="padding:14px 16px;border-radius:14px;background:#FFFFFF;border:1px solid #E4DFD4"><div style="font-size:12px;color:#6E6A62">{{ t.label }}</div><div style="font-family:'Bai Jamjuree';font-weight:600;font-size:24px">{{ t.value }}</div></div>
+      </sc-for>
+    </div>
+  </div>
+
+  <sc-for list="{{ sumDays }}" as="d" hint-placeholder-count="2">
+    <section style="display:flex;flex-direction:column;gap:18px;break-inside:avoid">
+      <div style="display:flex;align-items:baseline;gap:14px;flex-wrap:wrap">
+        <h2 style="margin:0;font-family:'Bai Jamjuree';font-weight:600;font-size:30px">วันที่ {{ d.n }}</h2>
+        <span style="font-size:15px;color:#45423C">{{ d.date }} · {{ d.span }}</span>
+        <span style="margin-left:auto;font-size:14px;color:#6E6A62">{{ d.count }} จุด · {{ d.km }} · เดินทาง {{ d.travel }}</span>
+      </div>
+      <div style="display:grid;grid-template-columns:{{ sumCols }};gap:20px;align-items:start">
+        <div style="position:relative;height:{{ sumMapH }};border-radius:16px;overflow:hidden;background:#EEF0FA;border:1px solid #E4DFD4">
+          <x-import component-from-global-scope="lao-map" from="./lao-map.js" theme="{{ mapTheme }}" mode="route" stops="{{ d.stopsJson }}" nearby="{{ d.nearbyJson }}" fit-key="{{ d.fitKey }}" hint-size="100%,100%" style="position:absolute;inset:0"></x-import>
+        </div>
+        <div style="display:flex;flex-direction:column">
+          <sc-for list="{{ d.items }}" as="s" hint-placeholder-count="4">
+            <div style="display:grid;grid-template-columns:52px 20px minmax(0,1fr);gap:12px">
+              <div style="font-family:'Bai Jamjuree';font-weight:600;font-size:15px;padding-top:1px;font-variant-numeric:tabular-nums">{{ s.time }}</div>
+              <div style="display:flex;flex-direction:column;align-items:center;align-self:stretch"><div style="width:22px;height:22px;border-radius:50%;background:#333F96;color:#fff;display:grid;place-items:center;font-size:11px;font-weight:700;flex-shrink:0">{{ s.n }}</div><div style="flex:1;width:2px;background:{{ s.lineColor }}"></div></div>
+              <div style="padding-bottom:14px;min-width:0">
+                <div style="font-size:16px;font-weight:600;line-height:1.4">{{ s.name }}</div>
+                <div style="font-size:13px;color:#6E6A62;line-height:1.6">{{ s.catLabel }} · {{ s.dur }}{{ s.feeText }}</div>
+                <sc-if value="{{ s.hasLeg }}" hint-placeholder-val="{{ true }}"><div style="font-size:12px;color:#6E6A62;display:flex;align-items:center;gap:4px;margin-top:4px"><span style="font-family:'Material Symbols Rounded';font-size:15px">{{ s.mode }}</span>{{ s.leg }}</div></sc-if>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      <sc-if value="{{ d.hasNearby }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex;flex-direction:column;gap:12px;padding:18px;border-radius:16px;background:#FBF7EC;border:1px solid #EFE2C4">
+          <div style="display:flex;align-items:center;gap:8px"><span style="font-family:'Material Symbols Rounded';font-size:20px;color:#B08A3E">near_me</span><span style="font-size:16px;font-weight:600">แนะนำใกล้เส้นทาง</span><span style="font-size:13px;color:#6B5320">ในรัศมี {{ radiusLabel }}</span></div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px">
+            <sc-for list="{{ d.nearby }}" as="p" hint-placeholder-count="4">
+              <div style="display:flex;align-items:center;gap:10px;padding:10px;border-radius:12px;background:#FFFFFF">
+                <div style="width:32px;height:32px;border-radius:50%;background:{{ p.color }};color:#fff;display:grid;place-items:center;font-family:'Material Symbols Rounded';font-size:18px;flex-shrink:0">{{ p.icon }}</div>
+                <div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:600">{{ p.name }}</div><div style="font-size:12px;color:#6E6A62">ห่าง {{ p.off }} · {{ p.between }}</div></div>
+                <sc-if value="{{ notPrinting }}" hint-placeholder-val="{{ true }}"><button onClick="{{ p.add }}" title="เพิ่มในวันนี้" style="width:36px;height:36px;border:0;border-radius:8px;background:#EEF0FA;color:#283278;font-family:'Material Symbols Rounded';font-size:20px;cursor:pointer;flex-shrink:0">add</button></sc-if>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+    </section>
+  </sc-for>
+  <div style="font-size:12px;color:#6E6A62;line-height:1.6;border-top:1px solid #E4DFD4;padding-top:16px">เวลาเดินทางเป็นค่าประมาณ อาจเปลี่ยนตามสภาพถนนและการจราจร · แผนที่ © OpenStreetMap</div>
+</div>
+</sc-if>
+
+</main>
+
+<sc-if value="{{ showBottomNav }}" hint-placeholder-val="{{ false }}">
+<nav style="height:68px;flex-shrink:0;border-top:1px solid #E4DFD4;background:#FFFFFF;display:grid;grid-template-columns:repeat(4,1fr);padding-bottom:8px;position:relative;z-index:900">
+  <sc-for list="{{ navItems }}" as="n" hint-placeholder-count="4">
+    <button onClick="{{ n.go }}" style="border:0;background:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:11px;color:{{ n.color }};font-weight:{{ n.weight }};cursor:pointer"><span style="font-family:'Material Symbols Rounded';font-size:24px">{{ n.icon }}</span>{{ n.short }}</button>
+  </sc-for>
+</nav>
+</sc-if>
+
+<sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}">
+  <div style="position:fixed;left:50%;bottom:{{ toastBottom }};transform:translateX(-50%);z-index:2000;padding:12px 18px;border-radius:12px;background:#141938;color:#F8F6F1;font-size:14px;box-shadow:0 12px 40px rgba(20,25,56,.3);display:flex;align-items:center;gap:8px;white-space:nowrap"><span style="font-family:'Material Symbols Rounded';font-size:18px;color:#D8B76A">check_circle</span>{{ toast }}</div>
+</sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;mapTheme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;light&quot;,&quot;dark&quot;],&quot;default&quot;:&quot;light&quot;,&quot;tsType&quot;:&quot;'light'|'dark'&quot;},&quot;startHour&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;min&quot;:6,&quot;max&quot;:12,&quot;step&quot;:1,&quot;unit&quot;:&quot;น.&quot;,&quot;default&quot;:9,&quot;tsType&quot;:&quot;number&quot;},&quot;supabaseUrl&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;API ทดสอบ&quot;},&quot;supabaseAnonKey&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;API ทดสอบ&quot;}}">
+const CATS = [
+  ['temple','วัด','temple_buddhist',75],['cafe','คาเฟ่','local_cafe',45],['food','ร้านอาหาร','restaurant',25],
+  ['stay','ที่พัก','hotel',320],['nature','น้ำตก/ธรรมชาติ','water',155],['market','ตลาด','storefront',355],
+  ['view','จุดชมวิว','landscape',215],['museum','พิพิธภัณฑ์','museum',260],['gift','ร้านของฝาก','redeem',110]
+].map(([key,label,icon,h]) => ({ key, label, icon, color: `oklch(0.6 0.12 ${h})`, ink: `oklch(0.48 0.12 ${h})` }));
+const CAT = Object.fromEntries(CATS.map((c) => [c.key, c]));
+const CITIES = [['lp','หลวงพระบาง'],['vte','เวียงจันทน์'],['vv','วังเวียง'],['pakse','ปากเซ'],['other','อื่น ๆ']];
+const CITY = Object.fromEntries(CITIES);
+const P = (id,name,cat,city,lat,lng,dur,open,fee,desc) => ({ id,name,cat,city,lat,lng,dur,open,fee,desc });
+const SEED = [
+  P('p1','พระราชวังหลวง','museum','lp',19.8919,102.1361,60,'08:00–16:00','30,000 กีบ','อดีตพระราชวัง ปัจจุบันเป็นพิพิธภัณฑ์แห่งชาติหลวงพระบาง แต่งกายสุภาพ'),
+  P('p2','พระธาตุภูษี','view','lp',19.8926,102.1378,60,'06:00–19:00','30,000 กีบ','ขึ้นบันได 328 ขั้น ชมวิวเมืองและแม่น้ำโขง'),
+  P('p3','วัดเชียงทอง','temple','lp',19.8976,102.1430,45,'08:00–17:00','20,000 กีบ','วัดสำคัญที่สุดของหลวงพระบาง ตั้งอยู่ริมแม่น้ำโขง'),
+  P('p4','Saffron Coffee','cafe','lp',19.8950,102.1395,45,'07:00–18:00','','กาแฟจากเกษตรกรภาคเหนือของลาว'),
+  P('p5','ตลาดมืดหลวงพระบาง','market','lp',19.8912,102.1347,90,'17:00–22:00','ฟรี','ตลาดผ้าทอและของที่ระลึกบนถนนสีสะหว่างวง'),
+  P('p6','วัดใหม่สุวรรณภูมาราม','temple','lp',19.8915,102.1372,30,'08:00–17:00','20,000 กีบ',''),
+  P('p7','Le Banneton','cafe','lp',19.8958,102.1409,40,'06:30–18:00','',''),
+  P('p8','ศูนย์ศิลปะและชาติพันธุ์','museum','lp',19.8897,102.1343,60,'09:00–18:00','25,000 กีบ',''),
+  P('p9','วัดวิชุนราช','temple','lp',19.8862,102.1362,30,'08:00–17:00','20,000 กีบ',''),
+  P('p10','Manda de Laos','food','lp',19.8878,102.1372,90,'11:00–22:00','',''),
+  P('p11','จุดชมวิวริมโขง','view','lp',19.8988,102.1404,30,'','ฟรี',''),
+  P('p12','Satri House','stay','lp',19.8868,102.1398,30,'','',''),
+  P('p13','ตาดกวางสี','nature','lp',19.7490,101.9930,180,'08:00–17:30','60,000 กีบ','น้ำตกหินปูนสีฟ้าคราม ห่างตัวเมืองราว 29 กม.'),
+  P('p14','บ้านผานม','gift','lp',19.8790,102.1690,60,'08:00–17:00','ฟรี','หมู่บ้านทอผ้าไทลื้อ'),
+  P('p15','ตลาดเช้าหลวงพระบาง','market','lp',19.8935,102.1385,45,'05:30–09:00','ฟรี',''),
+  P('p16','Ock Pop Tok','gift','lp',19.8788,102.1236,60,'08:00–17:00','',''),
+  P('p17','ถ้ำติ่ง (ปากอู)','nature','lp',20.0490,102.2180,120,'08:00–17:00','20,000 กีบ',''),
+  P('p18','พระธาตุหลวง','temple','vte',17.9764,102.6334,45,'08:00–17:00','10,000 กีบ',''),
+  P('p19','ประตูชัย','view','vte',17.9708,102.6189,30,'08:00–17:00','5,000 กีบ',''),
+  P('p20','วัดสีสะเกด','temple','vte',17.9628,102.6115,40,'08:00–16:00','10,000 กีบ',''),
+  P('p21','COPE Visitor Centre','museum','vte',17.9596,102.6206,60,'09:00–18:00','ฟรี',''),
+  P('p22','ตลาดเช้าเวียงจันทน์','market','vte',17.9660,102.6140,60,'08:00–16:00','ฟรี',''),
+  P('p23','Common Grounds','cafe','vte',17.9655,102.6070,45,'07:00–20:00','',''),
+  P('p24','สวนพระ (เซียงควน)','nature','vte',17.9122,102.7653,60,'08:00–17:00','15,000 กีบ',''),
+  P('p25','บลูลากูน 1','nature','vv',18.9370,102.4070,90,'08:00–17:00','10,000 กีบ',''),
+  P('p26','จุดชมวิวผาเงิน','view','vv',18.9500,102.4280,120,'06:00–18:00','20,000 กีบ',''),
+  P('p27','ร้านอาหารริมน้ำซอง','food','vv',18.9230,102.4470,60,'10:00–22:00','','')
+];
+const TRIP = { code:'TR-2569-118', name:'หลวงพระบาง 2 วัน 1 คืน', client:'คุณวรรณา และครอบครัว', pax:4, start:'2026-11-14', days:[['p1','p2','p3','p4','p5'],['p13','p14']] };
+const STORE = 'champa-route-v1';
+const rad = (d) => d * Math.PI / 180;
+const hav = (a, b) => { const x = Math.sin(rad(b.lat - a.lat) / 2) ** 2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(rad(b.lng - a.lng) / 2) ** 2; return 12742 * Math.asin(Math.sqrt(x)); };
+const segDist = (p, a, b) => {
+  const k = Math.cos(rad(p.lat)); const ax = (a.lng - p.lng) * k, ay = a.lat - p.lat, bx = (b.lng - p.lng) * k, by = b.lat - p.lat;
+  const dx = bx - ax, dy = by - ay, L2 = dx * dx + dy * dy; let t = L2 ? -(ax * dx + ay * dy) / L2 : 0; t = Math.max(0, Math.min(1, t));
+  const x = ax + t * dx, y = ay + t * dy; return Math.sqrt(x * x + y * y) * 111.32;
+};
+const travel = (a, b) => { const km = hav(a, b) * 1.35; const walk = km < 0.7; const min = Math.max(1, Math.round(walk ? km / 4.5 * 60 : km / (km < 8 ? 22 : 40) * 60 + 2)); return { km, min, walk }; };
+const fmtKm = (km) => km < 1 ? Math.round(km * 100) * 10 + ' ม.' : (km < 10 ? km.toFixed(1) : Math.round(km)) + ' กม.';
+const fmtDur = (m) => m < 60 ? m + ' นาที' : Math.floor(m / 60) + ' ชม.' + (m % 60 ? ' ' + (m % 60) + ' นาที' : '');
+const hhmm = (m) => String(Math.floor(m / 60) % 24).padStart(2, '0') + ':' + String(Math.round(m % 60)).padStart(2, '0');
+const parseOpen = (s) => { const m = (s || '').match(/(\d{1,2}):(\d{2})\D+(\d{1,2}):(\d{2})/); return m ? { o: +m[1] * 60 + +m[2], c: +m[3] * 60 + +m[4] } : null; };
+const isEvening = (p) => { const o = parseOpen(p.open); return o && o.o >= 15 * 60; };
+
+class Component extends DCLogic {
+  state = { screen: 'plan', w: typeof window !== 'undefined' ? window.innerWidth : 1280, places: SEED, trip: TRIP, day: 0, radius: 1,
+    city: 'lp', cats: [], q: '', sel: null, form: null, tried: false, addQ: '', drag: null, over: null, toast: '', printing: false };
+
+  componentDidMount() {
+    try { const s = JSON.parse(localStorage.getItem(STORE) || 'null'); if (s && s.places && s.trip) this.setState({ places: s.places, trip: s.trip }); } catch (e) {}
+    this.onResize = () => this.setState({ w: window.innerWidth });
+    window.addEventListener('resize', this.onResize);
+    this.onMap = (e) => {
+      const d = e.detail || {};
+      if (d.type === 'pick' && this.state.screen === 'form') this.setState((s) => ({ form: { ...s.form, lat: d.lat.toFixed(5), lng: d.lng.toFixed(5) } }));
+      if (d.type === 'select' && this.state.screen === 'places') this.setState({ sel: d.id });
+    };
+    document.addEventListener('laomap', this.onMap);
+    this.afterPrint = () => this.setState({ printing: false });
+    window.addEventListener('afterprint', this.afterPrint);
+    this.loadSupabase(); this.ensureLegs();
+  }
+  componentWillUnmount() { window.removeEventListener('resize', this.onResize); document.removeEventListener('laomap', this.onMap); window.removeEventListener('afterprint', this.afterPrint); }
+  componentDidUpdate(pp, ps) {
+    if (ps.places !== this.state.places || ps.trip !== this.state.trip) { this.ensureLegs(); if (this.state.sb !== 'ok') { try { localStorage.setItem(STORE, JSON.stringify({ places: this.state.places, trip: this.state.trip })); } catch (e) {} } }
+    if (pp.supabaseUrl !== this.props.supabaseUrl || pp.supabaseAnonKey !== this.props.supabaseAnonKey) this.loadSupabase();
+  }
+
+  flash(msg) { clearTimeout(this.tt); this.setState({ toast: msg }); this.tt = setTimeout(() => this.setState({ toast: '' }), 2400); }
+  setDays(fn) { this.setState((s) => ({ trip: { ...s.trip, days: fn(s.trip.days.map((d) => d.slice())) } })); }
+  addTo(dayIdx, id, afterIdx) {
+    const has = this.state.trip.days[dayIdx].includes(id);
+    if (has) { this.flash('มีสถานที่นี้ในวันที่ ' + (dayIdx + 1) + ' แล้ว'); return; }
+    this.setDays((days) => { const d = days[dayIdx]; if (afterIdx == null || afterIdx >= d.length) d.push(id); else d.splice(afterIdx + 1, 0, id); return days; });
+    this.flash('เพิ่ม ' + (this.byId()[id] || {}).name + ' ในวันที่ ' + (dayIdx + 1));
+  }
+  byId() { if (this._p !== this.state.places) { this._p = this.state.places; this._b = Object.fromEntries(this.state.places.map((p) => [p.id, p])); } return this._b; }
+  startMin() { const h = this.props.startHour ?? 9; return h * 60; }
+
+  legKey(list) { return list.map((p) => p.lat.toFixed(5) + ',' + p.lng.toFixed(5)).join(';'); }
+  ensureLegs() {
+    this.legs = this.legs || {}; this.pending = this.pending || {};
+    const byId = this.byId();
+    this.state.trip.days.forEach((ids) => {
+      const list = ids.map((id) => byId[id]).filter(Boolean); if (list.length < 2) return;
+      const key = this.legKey(list); if (this.legs[key] || this.pending[key]) return;
+      this.pending[key] = 1;
+      const q = list.map((p) => p.lng + ',' + p.lat).join(';');
+      fetch('https://router.project-osrm.org/route/v1/driving/' + q + '?overview=false')
+        .then((r) => r.json()).then((j) => {
+          if (j.code !== 'Ok') throw new Error(j.code);
+          this.legs[key] = j.routes[0].legs.map((l) => { const km = l.distance / 1000; const walk = km < 0.7; return { km, walk, min: Math.max(1, Math.round(walk ? km / 4.5 * 60 : l.duration / 60)), osrm: true }; });
+          this.setState((s) => ({ legsV: (s.legsV || 0) + 1, osrmOk: true }));
+        }).catch((e) => { console.warn('OSRM route failed:', e && e.message); this.setState({ osrmOk: false }); setTimeout(() => { delete this.pending[key]; }, 15000); });
+    });
+  }
+  async sbFetch(path, opts) {
+    const url = (this.props.supabaseUrl || '').replace(/\/$/, ''), key = this.props.supabaseAnonKey;
+    const r = await fetch(url + '/rest/v1/' + path, { ...opts, headers: { apikey: key, Authorization: 'Bearer ' + key, 'Content-Type': 'application/json', Prefer: 'return=representation', ...(opts && opts.headers) } });
+    if (!r.ok) throw new Error((await r.text()).slice(0, 160) || r.status);
+    return r.status === 204 ? null : r.json();
+  }
+  sbOn() { return !!(this.props.supabaseUrl && this.props.supabaseAnonKey); }
+  fromRow(r) { return { id: r.id, name: r.name, cat: r.category, city: r.city, lat: r.lat, lng: r.lng, dur: r.duration_min, open: r.open_hours || '', fee: r.fee || '', desc: r.description || '' }; }
+  toRow(p) { return { name: p.name, category: p.cat, city: p.city, location: 'SRID=4326;POINT(' + p.lng + ' ' + p.lat + ')', duration_min: +p.dur || 30, open_hours: p.open || null, fee: p.fee || null, description: p.desc || null }; }
+  async loadSupabase() {
+    if (!this.sbOn()) { this.setState({ sb: 'off' }); return; }
+    this.setState({ sb: 'loading' });
+    try {
+      const rows = await this.sbFetch('places?select=id,name,category,city,lat,lng,duration_min,open_hours,fee,description&order=name');
+      const places = rows.map((r) => this.fromRow(r));
+      const byName = Object.fromEntries(places.map((p) => [p.name, p.id]));
+      const seedName = Object.fromEntries(SEED.map((p) => [p.id, p.name]));
+      this.setState((s) => ({ places, sb: 'ok', sbErr: '', trip: { ...s.trip, days: s.trip.days.map((d) => d.map((id) => byName[seedName[id]] || (places.find((p) => p.id === id) ? id : null)).filter(Boolean)) } }));
+      this.flash('โหลด ' + places.length + ' สถานที่จาก Supabase');
+    } catch (e) { console.warn('Supabase load failed:', e && e.message); this.setState({ sb: 'error', sbErr: String(e.message || e) }); }
+  }
+
+  schedule(ids) {
+    const byId = this.byId(); let t = this.startMin(), km = 0, tm = 0; const out = [];
+    const list = ids.map((id) => byId[id]).filter(Boolean);
+    const real = list.length > 1 && this.legs ? this.legs[this.legKey(list)] : null;
+    list.forEach((p, i) => {
+      const op = parseOpen(p.open); const wait = op && t < op.o ? op.o - t : 0; const start = t + wait; const dur = +p.dur || 30; const end = start + dur;
+      const nx = list[i + 1]; const leg = nx ? (real ? real[i] : travel(p, nx)) : null; if (leg) { km += leg.km; tm += leg.min; }
+      out.push({ p, i, start, end, wait, late: op && end > op.c, closeAt: op ? hhmm(op.c) : '', leg });
+      t = end + (leg ? leg.min : 0);
+    });
+    return { list, items: out, km, tm, real: !!real, first: out.length ? out[0].start : null, last: out.length ? out[out.length - 1].end : null };
+  }
+  nearby(list, radius, exclude) {
+    if (!list.length) return [];
+    return this.state.places.filter((p) => !exclude.has(p.id)).map((p) => {
+      let best = Infinity, seg = 0;
+      if (list.length === 1) best = hav(p, list[0]);
+      else for (let i = 0; i < list.length - 1; i++) { const d = segDist(p, list[i], list[i + 1]); if (d < best) { best = d; seg = i; } }
+      return { p, d: best, seg };
+    }).filter((x) => x.d <= radius).sort((a, b) => a.d - b.d);
+  }
+  order(ids) {
+    const byId = this.byId(); const all = ids.map((id) => byId[id]).filter(Boolean);
+    if (all.length < 3) return ids;
+    const eve = all.slice(1).filter(isEvening), norm = all.slice(1).filter((p) => !isEvening(p));
+    const route = [all[0]]; const rest = norm.slice();
+    while (rest.length) { const last = route[route.length - 1]; let bi = 0, bd = Infinity; rest.forEach((p, i) => { const d = hav(last, p); if (d < bd) { bd = d; bi = i; } }); route.push(rest.splice(bi, 1)[0]); }
+    let improved = true, guard = 0;
+    while (improved && guard++ < 50) { improved = false;
+      for (let i = 1; i < route.length - 1; i++) for (let k = i + 1; k < route.length; k++) {
+        const a = route[i - 1], b = route[i], c = route[k], d = route[k + 1];
+        const delta = hav(a, c) + (d ? hav(b, d) : 0) - hav(a, b) - (d ? hav(c, d) : 0);
+        if (delta < -1e-6) { route.splice(i, k - i + 1, ...route.slice(i, k + 1).reverse()); improved = true; }
+      } }
+    return route.concat(eve).map((p) => p.id);
+  }
+  dateLabel(i) { const d = new Date(this.state.trip.start); d.setDate(d.getDate() + i); return d.toLocaleDateString('th-TH', { weekday: 'short', day: 'numeric', month: 'short' }); }
+  go(screen, extra) { this.setState({ screen, addQ: '', ...(extra || {}) }); const m = document.querySelector('main'); if (m) m.scrollTop = 0; }
+  openForm(p) {
+    const f = p ? { ...p, lat: String(p.lat), lng: String(p.lng), dur: String(p.dur || '') } : { id: null, name: '', cat: 'temple', city: this.state.city === 'all' ? 'lp' : this.state.city, lat: '', lng: '', open: '', fee: '', dur: '45', desc: '' };
+    this.go('form', { form: f, tried: false });
+  }
+  validate(f) {
+    const e = {}; const lat = parseFloat(f.lat), lng = parseFloat(f.lng);
+    if (!f.name.trim()) e.name = 'กรุณากรอกชื่อสถานที่';
+    if (isNaN(lat) || isNaN(lng)) e.coord = 'กรุณาระบุพิกัด หรือคลิกบนแผนที่';
+    else if (lat < 13.9 || lat > 22.5 || lng < 100.0 || lng > 107.7) { e.coord = 'พิกัดอยู่นอกขอบเขต สปป.ลาว (ละติจูด 13.9–22.5, ลองจิจูด 100.0–107.7)'; if (lat < 13.9 || lat > 22.5) e.lat = 1; if (lng < 100 || lng > 107.7) e.lng = 1; }
+    if (isNaN(lat)) e.lat = 1; if (isNaN(lng)) e.lng = 1;
+    if (f.dur && !(+f.dur > 0)) e.dur = 1;
+    return e;
+  }
+
+  renderVals() {
+    const s = this.state, w = s.w, byId = this.byId();
+    const isMobile = w < 640, isDesk = w >= 1024, isTab = !isMobile && !isDesk;
+    const mapTheme = this.props.mapTheme ?? 'light';
+    const radius = s.radius;
+    const inTrip = new Set(s.trip.days.flat());
+    const dayIdx = Math.min(s.day, s.trip.days.length - 1);
+    const dayIds = s.trip.days[dayIdx] || [];
+    const sch = this.schedule(dayIds);
+    const near = this.nearby(sch.list, radius, inTrip);
+    const segLabel = (n, len) => len < 2 ? 'ใกล้จุด 1' : 'ระหว่างจุด ' + (n.seg + 1) + '–' + (n.seg + 2);
+    const tipBySeg = {}; near.forEach((n) => { if (!tipBySeg[n.seg] && sch.list.length > 1) tipBySeg[n.seg] = n; });
+
+    const planItems = sch.items.map((it, i) => {
+      const c = CAT[it.p.cat] || CATS[0]; const tip = it.leg ? tipBySeg[i] : null;
+      return {
+        n: i + 1, name: it.p.name, catLabel: c.label, color: c.color, time: hhmm(it.start), end: hhmm(it.end), dur: fmtDur(+it.p.dur || 30),
+        hasWait: it.wait > 0, wait: it.wait > 0 ? 'ว่าง ' + fmtDur(it.wait) : '',
+        late: !!it.late, lateMsg: 'ปิด ' + it.closeAt + ' ก่อนเวลาออก',
+        hasLeg: !!it.leg, leg: it.leg ? 'ไปจุดถัดไป ' + fmtKm(it.leg.km) + ' · ' + (it.leg.walk ? 'เดิน ' : 'รถ ') + it.leg.min + ' นาที' : '', mode: it.leg && it.leg.walk ? 'directions_walk' : 'directions_car',
+        lineColor: it.leg ? '#DDE1F5' : 'transparent',
+        hasTip: !!tip, tipName: tip ? tip.p.name : '', tipCat: tip ? (CAT[tip.p.cat] || {}).label : '', tipOff: tip ? fmtKm(tip.d) : '',
+        tipAdd: () => tip && this.addTo(dayIdx, tip.p.id, i),
+        rowBg: s.over === i && s.drag != null ? '#EEF0FA' : 'transparent', rowLine: s.over === i && s.drag != null ? 'inset 0 2px 0 #333F96' : 'none',
+        dragStart: (e) => { e.dataTransfer.effectAllowed = 'move'; try { e.dataTransfer.setData('text/plain', String(i)); } catch (x) {} this.setState({ drag: i }); },
+        dragOver: (e) => { e.preventDefault(); if (s.over !== i) this.setState({ over: i }); },
+        drop: (e) => { e.preventDefault(); const from = this.state.drag; if (from == null || from === i) return this.setState({ drag: null, over: null }); this.setDays((days) => { const d = days[dayIdx]; const [m] = d.splice(from, 1); d.splice(i, 0, m); return days; }); this.setState({ drag: null, over: null }); },
+        up: () => { if (i === 0) return; this.setDays((days) => { const d = days[dayIdx]; [d[i - 1], d[i]] = [d[i], d[i - 1]]; return days; }); },
+        remove: () => { this.setDays((days) => { days[dayIdx].splice(i, 1); return days; }); this.flash('นำ ' + it.p.name + ' ออกแล้ว'); }
+      };
+    });
+    const nearItem = (n, len, di) => { const c = CAT[n.p.cat] || CATS[0]; return { name: n.p.name, catLabel: c.label, icon: c.icon, color: c.color, off: fmtKm(n.d), between: segLabel(n, len), add: () => this.addTo(di, n.p.id, len > 1 ? n.seg : null) }; };
+    const q = s.addQ.trim().toLowerCase();
+    const addResults = q ? s.places.filter((p) => p.name.toLowerCase().includes(q) && !dayIds.includes(p.id)).slice(0, 6).map((p) => { const c = CAT[p.cat] || CATS[0]; return { name: p.name, icon: c.icon, color: c.color, catLabel: c.label, cityLabel: CITY[p.city] || '', add: () => { this.addTo(dayIdx, p.id); this.setState({ addQ: '' }); } }; }) : [];
+
+    // places
+    const pq = s.q.trim().toLowerCase();
+    const filtered = s.places.filter((p) => (s.city === 'all' || p.city === s.city) && (!s.cats.length || s.cats.includes(p.cat)) && (!pq || p.name.toLowerCase().includes(pq)));
+    const selP = s.sel ? byId[s.sel] : null;
+    const selC = selP ? CAT[selP.cat] || CATS[0] : null;
+    const seg = (cur, val) => ({ bg: cur ? '#FFFFFF' : 'transparent', fg: cur ? '#1C1B22' : '#45423C', weight: cur ? 600 : 400, shadow: cur ? '0 1px 2px rgba(20,25,56,.1)' : 'none' });
+
+    // form
+    const f = s.form || {}; const errs = s.form ? this.validate(f) : {}; const show = s.tried;
+    const pinOk = !isNaN(parseFloat(f.lat)) && !isNaN(parseFloat(f.lng));
+    const bd = (bad) => (show && bad ? 'oklch(0.55 0.16 25)' : '#CFC8B9');
+    const fld = (k) => (e) => { const v = e.target.value; this.setState((st) => ({ form: { ...st.form, [k]: v } })); };
+
+    // summary
+    const sumDays = s.trip.days.map((ids, di) => {
+      const sc = this.schedule(ids); const nb = this.nearby(sc.list, radius, inTrip).slice(0, 6);
+      return {
+        n: di + 1, date: this.dateLabel(di), span: sc.first != null ? hhmm(sc.first) + '–' + hhmm(sc.last) : '—', count: sc.list.length, km: fmtKm(sc.km), travel: fmtDur(sc.tm),
+        stopsJson: JSON.stringify(sc.list.map((p) => ({ lat: p.lat, lng: p.lng, name: p.name }))), nearbyJson: JSON.stringify(nb.map((n) => ({ id: n.p.id, lat: n.p.lat, lng: n.p.lng, name: n.p.name, cat: n.p.cat }))),
+        fitKey: 'sum' + di + ':' + ids.join(','),
+        items: sc.items.map((it, i) => { const c = CAT[it.p.cat] || CATS[0]; return { n: i + 1, name: it.p.name, catLabel: c.label, time: hhmm(it.start), dur: fmtDur(+it.p.dur || 30), feeText: it.p.fee ? ' · ' + it.p.fee : '', hasLeg: !!it.leg, leg: it.leg ? fmtKm(it.leg.km) + ' · ' + (it.leg.walk ? 'เดิน ' : 'รถ ') + it.leg.min + ' นาที' : '', mode: it.leg && it.leg.walk ? 'directions_walk' : 'directions_car', lineColor: it.leg ? '#DDE1F5' : 'transparent' }; }),
+        hasNearby: nb.length > 0, nearby: nb.map((n) => nearItem(n, sc.list.length, di)), _km: sc.km, _tm: sc.tm, _n: sc.list.length
+      };
+    });
+    const totKm = sumDays.reduce((a, d) => a + d._km, 0), totTm = sumDays.reduce((a, d) => a + d._tm, 0), totN = sumDays.reduce((a, d) => a + d._n, 0);
+    const lastD = new Date(s.trip.start); lastD.setDate(lastD.getDate() + s.trip.days.length - 1);
+    const range = this.dateLabel(0).replace(/^\S+\s/, '') + ' – ' + lastD.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' });
+
+    const NAV = [['places','แผนที่สถานที่','สถานที่','map'],['plan','จัดเส้นทาง','เส้นทาง','route'],['summary','สรุปเส้นทาง','สรุป','description'],['form','เพิ่มสถานที่','เพิ่ม','add_location_alt']];
+    const title = { places: 'แผนที่สถานที่', plan: 'จัดเส้นทาง', summary: 'สรุปเส้นทาง', form: 'สถานที่' }[s.screen];
+
+    return {
+      isMobile, isNotMobile: !isMobile, mapTheme,
+      rootH: s.printing ? 'auto' : '100vh', mainOverflow: s.printing ? 'visible' : 'auto',
+      showHeader: !s.printing, showTopNav: !isMobile, showBottomNav: isMobile && !s.printing, notPrinting: !s.printing,
+      hPad: isMobile ? '16px' : isTab ? '16px' : '28px', headerNote: isMobile ? title : isTab ? '' : s.trip.code,
+      navItems: NAV.map(([k, label, short, icon]) => { const on = s.screen === k; return { label, short, icon, color: on ? '#333F96' : '#45423C', weight: on ? 600 : 400, bar: on ? '#333F96' : 'transparent', go: () => (k === 'form' ? this.openForm(null) : this.go(k)) }; }),
+      fillH: isDesk || (isTab && s.screen === 'places') ? '100%' : 'auto', colOverflow: isDesk || (isTab && s.screen === 'places') ? 'auto' : 'visible',
+      mapPos: isDesk || (isTab && s.screen === 'places') ? 'relative' : 'sticky',
+      // plan
+      isPlan: s.screen === 'plan', planCols: isDesk ? 'minmax(0,1fr) 540px' : '1fr', planMapH: isDesk ? '100%' : (isMobile ? '280px' : '400px'),
+      mapPad: isDesk ? '16px 0 16px 16px' : '0', mapRadius: isDesk ? '16px' : '0', colPad: isMobile ? '20px 16px' : (isDesk ? '28px 36px' : '24px 28px'),
+      dayTitleSize: isMobile ? '30px' : '40px', iconBtn: isMobile ? '44px' : '32px',
+      trip: { ...s.trip, range },
+      plan: { dayNo: dayIdx + 1, date: this.dateLabel(dayIdx), span: sch.first != null ? hhmm(sch.first) + '–' + hhmm(sch.last) : 'ยังไม่มีจุดแวะ', km: fmtKm(sch.km), travel: fmtDur(sch.tm), nearbyCount: near.length },
+      dayTabs: s.trip.days.map((_, i) => { const on = i === dayIdx; return { n: i + 1, bg: on ? '#141938' : '#FFFFFF', fg: on ? '#FFFFFF' : '#1C1B22', border: on ? '#141938' : '#CFC8B9', go: () => this.setState({ day: i }) }; }),
+      addDay: () => { this.setDays((d) => d.concat([[]])); this.setState({ day: s.trip.days.length }); },
+      canRemoveDay: s.trip.days.length > 1,
+      removeDay: () => { this.setDays((d) => { d.splice(dayIdx, 1); return d; }); this.setState({ day: Math.max(0, dayIdx - 1) }); this.flash('ลบวันที่ ' + (dayIdx + 1) + ' แล้ว'); },
+      autoOrder: () => { const before = sch.km; const ids = this.order(dayIds); this.setDays((d) => { d[dayIdx] = ids; return d; }); const after = this.schedule(ids).km; this.flash(after < before - 0.01 ? 'จัดลำดับแล้ว ระยะทางลดลง ' + fmtKm(before - after) : 'ลำดับปัจจุบันสั้นที่สุดแล้ว'); },
+      addQ: s.addQ, onAddQ: (e) => this.setState({ addQ: e.target.value }), addResults, hasAddResults: addResults.length > 0,
+      planEmpty: !sch.list.length, planItems, dragEnd: () => this.setState({ drag: null, over: null }),
+      planStopsJson: JSON.stringify(sch.list.map((p) => ({ lat: p.lat, lng: p.lng, name: p.name }))),
+      planNearbyJson: JSON.stringify(near.map((n) => ({ id: n.p.id, lat: n.p.lat, lng: n.p.lng, name: n.p.name, cat: n.p.cat }))),
+      planFitKey: 'plan' + dayIdx + ':' + sch.list.length,
+      radiusOpts: [0.5, 1, 2, 3, 5].map((r) => ({ label: r < 1 ? '500 ม.' : r + ' กม.', ...seg(r === radius), pick: () => this.setState({ radius: r }) })),
+      radiusLabel: radius < 1 ? '500 ม.' : radius + ' กม.',
+      planNearbyList: near.slice(0, 6).map((n) => nearItem(n, sch.list.length, dayIdx)), hasPlanNearby: near.length > 0, noPlanNearby: !near.length && sch.list.length > 0,
+      copyLink: () => { const url = location.href.split('#')[0] + '#trip=' + s.trip.code; try { navigator.clipboard.writeText(url); } catch (e) {} this.flash('คัดลอกลิงก์สำหรับลูกค้าแล้ว'); },
+      goSummary: () => this.go('summary'), goPlan: () => this.go('plan'),
+      // places
+      isPlaces: s.screen === 'places', placesCols: isDesk ? '420px minmax(0,1fr)' : isTab ? '340px minmax(0,1fr)' : '1fr',
+      placesMapH: isMobile ? '320px' : '100%', listOrder: isMobile ? 1 : 0, mapOrder: isMobile ? 0 : 1, sidePad: isMobile ? '16px' : '20px',
+      placesCount: filtered.length, cityLabel: s.city === 'all' ? 'ทุกเมือง' : CITY[s.city],
+      q: s.q, onQ: (e) => this.setState({ q: e.target.value }),
+      cityOpts: [['all', 'ทั้งหมด'], ...CITIES.slice(0, 3)].map(([k, l]) => ({ label: l, ...seg(s.city === k), pick: () => this.setState({ city: k, sel: null }) })),
+      catChips: CATS.map((c) => { const on = s.cats.includes(c.key); return { ...c, bg: on ? '#141938' : '#FFFFFF', fg: on ? '#FFFFFF' : '#1C1B22', border: on ? '#141938' : '#E4DFD4', toggle: () => this.setState((st) => ({ cats: on ? st.cats.filter((x) => x !== c.key) : st.cats.concat(c.key) })) }; }),
+      placeCards: filtered.map((p) => { const c = CAT[p.cat] || CATS[0]; const on = s.sel === p.id; return { name: p.name, icon: c.icon, color: c.ink, catLabel: c.label, inTrip: inTrip.has(p.id), meta: [CITY[p.city], p.open && 'เปิด ' + p.open, p.fee].filter(Boolean).join(' · '), border: on ? '#333F96' : '#E4DFD4', shadow: on ? '0 0 0 3px #DDE1F5' : 'none', select: () => this.setState({ sel: p.id }) }; }),
+      noPlaces: !filtered.length,
+      placesJson: JSON.stringify(filtered.map((p) => ({ id: p.id, lat: p.lat, lng: p.lng, name: p.name, cat: p.cat, sel: p.id === s.sel }))),
+      placesFitKey: 'places:' + s.city + ':' + s.cats.join(',') + ':' + pq,
+      focusJson: selP ? JSON.stringify({ lat: selP.lat, lng: selP.lng }) : '',
+      hasSel: !!selP, clearSel: () => this.setState({ sel: null }),
+      sel: selP ? { name: selP.name, icon: selC.icon, color: selC.color, catLabel: selC.label, cityLabel: CITY[selP.city] || '', coords: selP.lat.toFixed(4) + ', ' + selP.lng.toFixed(4),
+        info: [selP.open ? 'เปิด ' + selP.open : 'ไม่ระบุเวลาเปิด', selP.fee ? 'ค่าเข้า ' + selP.fee : '', 'เวลาแนะนำ ' + fmtDur(+selP.dur || 30)].filter(Boolean).join(' · '),
+        hasDesc: !!selP.desc, desc: selP.desc, edit: () => this.openForm(selP),
+        addLabel: dayIds.includes(selP.id) ? 'อยู่ในวันที่ ' + (dayIdx + 1) + ' แล้ว' : '+ เพิ่มในวันที่ ' + (dayIdx + 1), addToTrip: () => this.addTo(dayIdx, selP.id) } : {},
+      newPlace: () => this.openForm(null), newPlaceLabel: isTab ? 'เพิ่ม' : 'เพิ่มสถานที่',
+      // form
+      isForm: s.screen === 'form', pagePad: isMobile ? '20px 16px 32px' : '28px 28px 48px', cardPad: isMobile ? '18px' : '24px',
+      formCols: isDesk ? 'minmax(0,1fr) minmax(0,1fr)' : '1fr', formMapH: isDesk ? 'calc(100vh - 160px)' : '360px', formMapPos: isDesk ? 'sticky' : 'relative',
+      formTitle: f.id ? 'แก้ไข: ' + f.name : 'เพิ่มสถานที่ใหม่', isEditing: !!f.id,
+      form: { name: f.name || '', city: f.city || 'lp', lat: f.lat || '', lng: f.lng || '', open: f.open || '', fee: f.fee || '', dur: f.dur || '', desc: f.desc || '' },
+      onField: { name: fld('name'), city: fld('city'), lat: fld('lat'), lng: fld('lng'), open: fld('open'), fee: fld('fee'), dur: fld('dur'), desc: fld('desc') },
+      formCats: CATS.map((c) => { const on = f.cat === c.key; return { ...c, bg: on ? '#EEF0FA' : '#FFFFFF', fg: on ? '#1E255A' : '#1C1B22', border: on ? '#333F96' : '#E4DFD4', pick: () => this.setState((st) => ({ form: { ...st.form, cat: c.key } })) }; }),
+      cityList: CITIES.map(([key, label]) => ({ key, label })),
+      err: { hasName: show && !!errs.name, name: errs.name || '', nameBorder: bd(errs.name), latBorder: bd(errs.lat), lngBorder: bd(errs.lng), durBorder: bd(errs.dur), hasCoord: show && !!errs.coord, coord: errs.coord || '' },
+      pinJson: pinOk ? JSON.stringify({ lat: parseFloat(f.lat), lng: parseFloat(f.lng) }) : '',
+      pinFocusJson: '', formFitKey: 'form:' + (f.id || 'new') + ':' + (pinOk ? 'pin' : (f.city || '')),
+      formPlacesJson: JSON.stringify(s.places.filter((p) => p.id !== f.id && p.city === (f.city || 'lp')).map((p) => ({ id: p.id, lat: p.lat, lng: p.lng, name: p.name, cat: p.cat }))),
+      cancelForm: () => this.go(f.id ? 'places' : 'places', { form: null }),
+      savePlace: async () => {
+        if (Object.keys(errs).length) { this.setState({ tried: true }); return; }
+        const rec = { ...f, name: f.name.trim(), lat: +parseFloat(f.lat).toFixed(5), lng: +parseFloat(f.lng).toFixed(5), dur: +f.dur || 30 };
+        if (this.state.sb === 'ok') {
+          try {
+            const rows = f.id ? await this.sbFetch('places?id=eq.' + f.id, { method: 'PATCH', body: JSON.stringify(this.toRow(rec)) }) : await this.sbFetch('places', { method: 'POST', body: JSON.stringify(this.toRow(rec)) });
+            if (rows && rows[0]) rec.id = rows[0].id;
+          } catch (e) { this.flash('บันทึกไม่สำเร็จ: ' + String(e.message || e).slice(0, 60)); return; }
+        }
+        const id = rec.id || 'p' + Date.now().toString(36); rec.id = id;
+        this.setState((st) => ({ places: f.id ? st.places.map((p) => (p.id === id ? rec : p)) : st.places.concat(rec), city: rec.city, cats: [], q: '' }));
+        this.go('places', { sel: id, form: null }); this.flash(f.id ? 'บันทึกการแก้ไขแล้ว' : 'เพิ่ม ' + rec.name + ' แล้ว');
+      },
+      deletePlace: async () => { const id = f.id;
+        if (this.state.sb === 'ok') { try { await this.sbFetch('places?id=eq.' + id, { method: 'DELETE' }); } catch (e) { this.flash('ลบไม่สำเร็จ: ' + String(e.message || e).slice(0, 60)); return; } } this.setState((st) => ({ places: st.places.filter((p) => p.id !== id), trip: { ...st.trip, days: st.trip.days.map((d) => d.filter((x) => x !== id)) } })); this.go('places', { sel: null, form: null }); this.flash('ลบสถานที่แล้ว'); },
+      // summary
+      isSummary: s.screen === 'summary', sumTitleSize: isMobile ? '32px' : '44px', sumCols: isDesk ? 'minmax(0,1.1fr) minmax(0,1fr)' : '1fr', sumMapH: isMobile ? '260px' : '380px',
+      sumStats: [{ label: 'จำนวนวัน', value: s.trip.days.length + ' วัน' }, { label: 'จุดแวะ', value: totN + ' จุด' }, { label: 'ระยะทางรวม', value: fmtKm(totKm) }, { label: 'เวลาเดินทางรวม', value: fmtDur(totTm) }],
+      sumDays, printPdf: () => { this.setState({ printing: true }); setTimeout(() => window.print(), 600); },
+      apiNote: (s.sb === 'ok' ? 'Supabase' : s.sb === 'loading' ? 'กำลังเชื่อม Supabase…' : s.sb === 'error' ? 'Supabase ผิดพลาด' : 'ข้อมูลตัวอย่าง') + ' · ' + (s.osrmOk ? 'เวลาเดินทาง OSRM' : 'เวลาเดินทางโดยประมาณ'),
+      apiDot: s.sb === 'error' ? 'oklch(0.55 0.16 25)' : s.sb === 'ok' && s.osrmOk ? 'oklch(0.55 0.12 155)' : 'oklch(0.7 0.13 75)',
+      apiNoteShown: isDesk ? (s.sb === 'ok' ? 'Supabase' : s.sb === 'loading' ? 'กำลังเชื่อม Supabase…' : s.sb === 'error' ? 'Supabase ผิดพลาด' : 'ข้อมูลตัวอย่าง') + ' · ' + (s.osrmOk ? 'เวลาเดินทาง OSRM' : 'เวลาเดินทางโดยประมาณ') : '',
+      apiTitle: (s.sb === 'ok' ? 'Supabase' : s.sb === 'error' ? 'Supabase ผิดพลาด: ' + (s.sbErr || '') : 'ข้อมูลตัวอย่าง') + ' · ' + (s.osrmOk ? 'OSRM' : 'ค่าประมาณ'),
+      navFont: isTab ? '14px' : '15px',
+      hasSbErr: s.sb === 'error', sbErr: s.sbErr || '',
+      planSrc: sch.real ? 'ตามถนนจริง (OSRM)' : 'ค่าประมาณ',
+      hasToast: !!s.toast, toast: s.toast, toastBottom: isMobile ? '88px' : '28px'
+    };
+  }
+}
+</script>
+</body>
+</html>

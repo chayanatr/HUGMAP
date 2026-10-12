@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Anuphan:wght@300;400;500;600;700&family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,300..500,0..1,0&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F5F6FA;color:#1C1D3B;font-family:Anuphan,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:#2F8466;text-decoration:underline;text-underline-offset:2px}a:hover{color:#246B52}
+*{box-sizing:border-box}
+button,input{font-family:Anuphan,sans-serif}
+</style>
+</helmet>
+<div style="max-width:1200px;margin:0 auto;padding:56px 32px 96px;display:flex;flex-direction:column;gap:64px">
+
+<header style="display:flex;flex-direction:column;gap:16px;border-bottom:1px solid #ECEEF5;padding-bottom:36px">
+  <div style="display:flex;align-items:center;gap:12px">
+    <div style="width:44px;height:44px;border-radius:12px;background:#2F8466;color:#fff;display:grid;place-items:center;font-family:'Material Symbols Rounded';font-size:26px">map</div>
+    <div style="font-weight:700;font-size:18px;letter-spacing:.08em">HUGMAP</div>
+    <div style="margin-left:auto;font-size:13px;color:#9A9DB4">Design System v2 · ต.ค. 2569</div>
+  </div>
+  <h1 style="margin:0;font-weight:700;font-size:40px;line-height:1.25;letter-spacing:-.01em;text-wrap:pretty">ระบบจัดเก็บสถานที่และจัดเส้นทางท่องเที่ยว สปป.ลาว</h1>
+  <p style="margin:0;max-width:760px;font-size:16px;line-height:1.7;color:#5B5F7B;text-wrap:pretty">การ์ดสีขาวบนพื้นเทาอมฟ้าอ่อน แถบเมนูสีเขียวหม่น แผนที่โทนเทาให้เส้นทางและหมุดเด่น การ์ดลอยสีเขียวเข้มสำหรับรายละเอียดที่เลือก ตัวอักษร Anuphan ทั้งระบบ · <a href="HUGMAP.dc.html">ต้นแบบแอป</a> · <a href="HUGMAP Design System v1.dc.html">ระบบเดิม (คราม)</a></p>
+</header>
+
+<section style="display:flex;flex-direction:column;gap:24px">
+  <div style="display:flex;align-items:baseline;gap:14px"><span style="font-size:13px;color:#A3A6BC">01</span><h2 style="margin:0;font-weight:700;font-size:26px">สี</h2></div>
+  <div style="display:flex;flex-direction:column;gap:10px">
+    <div style="font-size:14px;font-weight:600">Green · สีหลัก</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px">
+      <sc-for list="{{ greens }}" as="c" hint-placeholder-count="8">
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <div style="height:64px;border-radius:12px;background:{{ c.hex }};border:1px solid rgba(0,0,0,.04)"></div>
+          <div style="font-size:12px;line-height:1.5"><b style="font-weight:600">{{ c.name }}</b> <span style="color:#9A9DB4">{{ c.hex }}</span><br><span style="color:#5B5F7B">{{ c.use }}</span></div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:10px">
+    <div style="font-size:14px;font-weight:600">Neutral</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px">
+      <sc-for list="{{ neutrals }}" as="c" hint-placeholder-count="9">
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <div style="height:56px;border-radius:12px;background:{{ c.hex }};border:1px solid #E3E5EF"></div>
+          <div style="font-size:12px;line-height:1.5"><b style="font-weight:600">{{ c.name }}</b> <span style="color:#9A9DB4">{{ c.hex }}</span><br><span style="color:#5B5F7B">{{ c.use }}</span></div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px">
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="font-size:14px;font-weight:600">Dark card · การ์ดลอย</div>
+      <div style="display:flex;gap:6px">
+        <sc-for list="{{ darks }}" as="c" hint-placeholder-count="5"><div style="flex:1;display:flex;flex-direction:column;gap:4px"><div style="height:48px;border-radius:10px;background:{{ c.hex }}"></div><span style="font-size:11px;color:#5B5F7B">{{ c.hex }}<br>{{ c.use }}</span></div></sc-for>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="font-size:14px;font-weight:600">Status pill</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <span style="padding:3px 10px;border-radius:6px;background:#E3F6EE;color:#1E9466;font-size:12px;font-weight:500">ในทริป · ห่าง 90 ม.</span>
+        <span style="padding:3px 10px;border-radius:6px;background:#FFF3DE;color:#B7791F;font-size:12px;font-weight:500">ว่าง 4 ชม.</span>
+        <span style="padding:3px 10px;border-radius:6px;background:#E5F2EC;color:#246B52;font-size:12px;font-weight:600">TR-2569-118</span>
+        <span style="padding:3px 10px;border-radius:6px;background:#FDECEC;color:#C93A3F;font-size:12px;font-weight:500">ปิดก่อนเวลาออก</span>
+      </div>
+      <div style="font-size:12px;color:#9A9DB4;line-height:1.6">success #E3F6EE / #1E9466 · warning #FFF3DE / #B7791F · danger #E5484D (ข้อความ #C93A3F)</div>
+    </div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:12px">
+    <div style="font-size:14px;font-weight:600">หมวดสถานที่ · ไอคอน oklch(0.6 0.12 h) บนพื้น oklch(0.95 0.035 h)</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px">
+      <sc-for list="{{ cats }}" as="c" hint-placeholder-count="9">
+        <div style="display:flex;align-items:center;gap:12px;padding:12px;border-radius:14px;background:#FFFFFF;box-shadow:0 6px 20px rgba(28,29,59,.06)">
+          <div style="width:44px;height:44px;border-radius:12px;background:{{ c.soft }};color:{{ c.color }};display:grid;place-items:center;font-family:'Material Symbols Rounded';font-size:22px;flex-shrink:0">{{ c.icon }}</div>
+          <div style="display:flex;flex-direction:column;gap:2px;min-width:0"><div style="font-size:14px;font-weight:600">{{ c.label }}</div><div style="font-size:11px;color:#9A9DB4;font-family:ui-monospace,monospace">{{ c.key }} · h{{ c.h }}</div></div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+</section>
+
+<section style="display:flex;flex-direction:column;gap:24px">
+  <div style="display:flex;align-items:baseline;gap:14px"><span style="font-size:13px;color:#A3A6BC">02</span><h2 style="margin:0;font-weight:700;font-size:26px">ตัวอักษร · Anuphan</h2></div>
+  <div style="display:flex;flex-direction:column;background:#FFFFFF;border-radius:16px;box-shadow:0 6px 20px rgba(28,29,59,.06);padding:4px 20px">
+    <sc-for list="{{ typeScale }}" as="t" hint-placeholder-count="8">
+      <div style="display:grid;grid-template-columns:150px minmax(0,1fr);gap:16px;align-items:baseline;padding:14px 0;border-bottom:1px solid #EEF0F5">
+        <div style="font-size:12px;color:#9A9DB4;line-height:1.5"><b style="color:#1C1D3B;font-weight:600">{{ t.name }}</b><br>{{ t.spec }}</div>
+        <div style="font-size:{{ t.size }};line-height:{{ t.lh }};font-weight:{{ t.weight }};color:{{ t.color }};text-wrap:pretty">{{ t.sample }}</div>
+      </div>
+    </sc-for>
+  </div>
+  <div style="font-size:13px;color:#9A9DB4;line-height:1.7;max-width:760px">รูปแบบ “ป้ายเล็ก + ค่า”: ป้าย 11px สี #A3A6BC อยู่เหนือค่า 13–15px ใช้กับข้อมูลทุกชนิดในการ์ด · ตัวเลขใช้ tabular-nums · เนื้อหาภาษาไทย line-height ≥ 1.5</div>
+</section>
+
+<section style="display:flex;flex-direction:column;gap:24px">
+  <div style="display:flex;align-items:baseline;gap:14px"><span style="font-size:13px;color:#A3A6BC">03</span><h2 style="margin:0;font-weight:700;font-size:26px">ระยะ มุมโค้ง เงา</h2></div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:24px">
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="font-size:14px;font-weight:600">Spacing · ฐาน 4px</div>
+      <sc-for list="{{ spacing }}" as="s" hint-placeholder-count="8">
+        <div style="display:flex;align-items:center;gap:12px;font-size:12px"><span style="width:44px;color:#9A9DB4;font-family:ui-monospace,monospace">{{ s.name }}</span><div style="height:10px;width:{{ s.px }};background:#2F8466;border-radius:3px"></div><span style="color:#9A9DB4">{{ s.px }}</span></div>
+      </sc-for>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="font-size:14px;font-weight:600">Radius</div>
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px">
+        <sc-for list="{{ radii }}" as="r" hint-placeholder-count="5">
+          <div style="display:flex;flex-direction:column;gap:6px;align-items:center"><div style="width:100%;aspect-ratio:1;background:#E5F2EC;border:1.5px solid #2F8466;border-radius:{{ r.px }}"></div><div style="font-size:11px;color:#5B5F7B;text-align:center;line-height:1.4">{{ r.px }}<br><span style="color:#9A9DB4">{{ r.name }}</span></div></div>
+        </sc-for>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="font-size:14px;font-weight:600">Elevation</div>
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;padding:14px;background:#ECEEF3;border-radius:14px">
+        <sc-for list="{{ shadows }}" as="s" hint-placeholder-count="4">
+          <div style="height:72px;border-radius:12px;background:{{ s.bg }};color:{{ s.fg }};box-shadow:{{ s.css }};display:flex;align-items:flex-end;padding:8px 10px;font-size:11px;line-height:1.3">{{ s.name }}</div>
+        </sc-for>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section style="display:flex;flex-direction:column;gap:24px">
+  <div style="display:flex;align-items:baseline;gap:14px"><span style="font-size:13px;color:#A3A6BC">04</span><h2 style="margin:0;font-weight:700;font-size:26px">โครงหน้าจอ 3 ขนาด</h2></div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px">
+    <div style="padding:20px;border-radius:16px;background:#FFFFFF;box-shadow:0 6px 20px rgba(28,29,59,.06);display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline"><b style="font-size:16px;font-weight:600">Mobile</b><span style="font-size:12px;color:#9A9DB4;font-family:ui-monospace,monospace">&lt; 640px</span></div>
+      <div style="height:150px;display:flex;justify-content:center"><div style="width:84px;height:150px;border-radius:14px;overflow:hidden;display:flex;flex-direction:column;border:1.5px solid #E3E5EF"><div style="height:52px;background:#ECEEF3"></div><div style="flex:1;background:#F7F8FC;padding:5px;display:flex;flex-direction:column;gap:4px"><div style="height:22px;background:#fff;border-radius:4px"></div><div style="height:22px;background:#fff;border-radius:4px"></div></div><div style="height:16px;background:#2F8466"></div></div></div>
+      <div style="font-size:13px;line-height:1.6;color:#5B5F7B">แผนที่ 300px ด้านบน การ์ดด้านล่าง แถบเมนูเขียว 68px · เนื้อหาการ์ดลอยย้ายเข้าแผง · ปุ่มกด ≥ 44px</div>
+    </div>
+    <div style="padding:20px;border-radius:16px;background:#FFFFFF;box-shadow:0 6px 20px rgba(28,29,59,.06);display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline"><b style="font-size:16px;font-weight:600">Tablet</b><span style="font-size:12px;color:#9A9DB4;font-family:ui-monospace,monospace">640–1023px</span></div>
+      <div style="height:150px;display:flex;justify-content:center"><div style="width:200px;height:150px;border-radius:14px;overflow:hidden;display:flex;border:1.5px solid #E3E5EF"><div style="width:16px;background:#2F8466"></div><div style="width:70px;background:#F7F8FC;padding:5px;display:flex;flex-direction:column;gap:4px"><div style="height:30px;background:#fff;border-radius:4px"></div><div style="height:30px;background:#fff;border-radius:4px"></div></div><div style="flex:1;background:#ECEEF3;position:relative"><div style="position:absolute;left:6px;right:6px;bottom:6px;height:18px;background:#fff;border-radius:4px"></div></div></div></div>
+      <div style="font-size:13px;line-height:1.6;color:#5B5F7B">แถบเมนู 64px + แผง 340px + แผนที่ · แถบ “ใกล้เส้นทาง” ลอยด้านล่างแผนที่ · ปุ่มดูสรุปอยู่ท้ายแผง</div>
+    </div>
+    <div style="padding:20px;border-radius:16px;background:#FFFFFF;box-shadow:0 6px 20px rgba(28,29,59,.06);display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline"><b style="font-size:16px;font-weight:600">Desktop</b><span style="font-size:12px;color:#9A9DB4;font-family:ui-monospace,monospace">≥ 1024px</span></div>
+      <div style="height:150px;display:flex;justify-content:center"><div style="width:260px;height:150px;border-radius:14px;overflow:hidden;display:flex;border:1.5px solid #E3E5EF"><div style="width:18px;background:#2F8466"></div><div style="width:84px;background:#F7F8FC;padding:5px;display:flex;flex-direction:column;gap:4px"><div style="height:34px;background:#fff;border-radius:4px"></div><div style="height:34px;background:#fff;border-radius:4px"></div></div><div style="flex:1;background:#ECEEF3;position:relative"><div style="position:absolute;left:6px;right:60px;bottom:6px;height:20px;background:#fff;border-radius:4px"></div><div style="position:absolute;right:6px;bottom:6px;width:48px;height:36px;background:#1F3A32;border-radius:5px"></div></div></div></div>
+      <div style="font-size:13px;line-height:1.6;color:#5B5F7B">แถบเมนู 72px + แผง 400px (ฟอร์ม 440px) + แผนที่ · การ์ดลอยเขียวเข้ม 280–340px มุมขวาล่าง · ปุ่มซูมมุมขวาบน</div>
+    </div>
+  </div>
+</section>
+
+<section style="display:flex;flex-direction:column;gap:28px">
+  <div style="display:flex;align-items:baseline;gap:14px"><span style="font-size:13px;color:#A3A6BC">05</span><h2 style="margin:0;font-weight:700;font-size:26px">Components</h2></div>
+
+  <div style="display:flex;flex-direction:column;gap:12px">
+    <div style="font-size:14px;font-weight:600">แถบเมนู</div>
+    <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:flex-start">
+      <div style="width:72px;background:#2F8466;border-radius:14px;padding:14px 0;display:flex;flex-direction:column;align-items:center;gap:4px">
+        <div style="width:40px;height:40px;border-radius:12px;background:#FFFFFF;color:#2F8466;display:grid;place-items:center;font-family:'Material Symbols Rounded';font-size:24px">map</div>
+        <div style="font-size:10px;font-weight:700;letter-spacing:.08em;color:#FFFFFF;margin-bottom:10px">HUGMAP</div>
+        <sc-for list="{{ nav }}" as="n" hint-placeholder-count="4">
+          <div style="width:100%;height:56px;background:{{ n.bg }};color:{{ n.fg }};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:10px"><span style="font-family:'Material Symbols Rounded';font-size:22px">{{ n.icon }}</span>{{ n.short }}</div>
+        </sc-for>
+      </div>
+      <div style="flex:1;min-width:260px;display:flex;flex-direction:column;gap:10px">
+        <div style="width:100%;max-width:390px;height:68px;background:#2F8466;border-radius:14px;display:grid;grid-template-columns:repeat(4,1fr)">
+          <sc-for list="{{ nav }}" as="n" hint-placeholder-count="4">
+            <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:11px;color:{{ n.fg }};font-weight:{{ n.weight }}"><span style="font-family:'Material Symbols Rounded';font-size:24px">{{ n.icon }}</span>{{ n.short }}</div>
+          </sc-for>
+        </div>
+        <div style="font-size:12px;color:#9A9DB4;line-height:1.6">พื้น #2F8466 · ที่เลือก: พื้น rgba(0,0,0,.16) ตัว #FFFFFF · ไม่ได้เลือก: ตัว #E1F0EA (คอนทราสต์ ≥ 4.5:1)</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:12px">
+    <div style="font-size:14px;font-weight:600">ปุ่ม</div>
+    <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">
+      <button style="height:44px;padding:0 20px;border:0;border-radius:10px;background:#2F8466;color:#fff;font-size:14px;font-weight:600;display:flex;align-items:center;gap:6px;cursor:pointer" style-hover="background:#246B52">ดูสรุปเส้นทาง<span style="font-family:'Material Symbols Rounded';font-size:18px">arrow_forward</span></button>
+      <button style="height:44px;padding:0 16px;border:1px solid #E3E5EF;border-radius:10px;background:#FFFFFF;color:#1C1D3B;font-size:14px;display:flex;align-items:center;gap:6px;cursor:pointer" style-hover="background:#F5F6FA"><span style="font-family:'Material Symbols Rounded';font-size:18px">link</span>คัดลอกลิงก์ลูกค้า</button>
+      <button style="height:36px;padding:0 12px;border:0;border-radius:8px;background:#E5F2EC;color:#2F8466;font-size:13px;font-weight:600;cursor:pointer">+ เพิ่ม</button>
+      <button style="width:40px;height:40px;border:1px solid #E3E5EF;border-radius:10px;background:#FFFFFF;color:#2F8466;font-family:'Material Symbols Rounded';font-size:20px;cursor:pointer">auto_awesome</button>
+      <button style="width:40px;height:40px;border:0;border-radius:10px;background:#2F8466;color:#FFFFFF;font-family:'Material Symbols Rounded';font-size:20px;cursor:pointer">add_location_alt</button>
+      <button style="height:44px;padding:0 12px;border:0;border-radius:10px;background:transparent;color:#E5484D;font-size:14px;cursor:pointer">ลบ</button>
+    </div>
+    <div style="font-size:12px;color:#9A9DB4">ปุ่มหลักหนึ่งปุ่มต่อพื้นที่ · ปุ่มไอคอน 40px เฉพาะ Desktop/Tablet, Mobile ≥ 44px</div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:24px">
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div style="font-size:14px;font-weight:600">ช่องกรอก + ตัวกรอง</div>
+      <label style="display:flex;flex-direction:column;gap:6px;font-size:12px;color:#5B5F7B;font-weight:500">ชื่อสถานที่ *
+        <input value="วัดเชียงทอง" style="height:44px;padding:0 14px;border:1px solid #E3E5EF;border-radius:10px;font-size:15px;color:#1C1D3B;background:#F7F8FC;outline:none" style-focus="border-color:#2F8466;background:#FFFFFF;box-shadow:0 0 0 3px #D3EBDF">
+      </label>
+      <label style="display:flex;flex-direction:column;gap:6px;font-size:12px;color:#5B5F7B;font-weight:500">ละติจูด
+        <div style="height:44px;padding:0 14px;border:1px solid #E5484D;border-radius:10px;background:#F7F8FC;display:flex;align-items:center;font-size:14px">12.5</div>
+        <span style="font-size:12px;color:#E5484D;font-weight:400">พิกัดอยู่นอกขอบเขต สปป.ลาว</span>
+      </label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <div style="height:36px;padding:0 10px;border:1px solid #E3E5EF;border-radius:10px;background:#FFFFFF;font-size:13px;display:flex;align-items:center;gap:4px">หลวงพระบาง<span style="font-family:'Material Symbols Rounded';font-size:16px">expand_more</span></div>
+        <div style="height:36px;padding:0 10px 0 12px;border-radius:10px;background:#E5F2EC;color:#2F8466;font-size:13px;font-weight:500;display:flex;align-items:center;gap:6px">หมวด: 2<span style="font-family:'Material Symbols Rounded';font-size:16px">close</span></div>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div style="font-size:14px;font-weight:600">การ์ดสถานที่</div>
+      <div style="background:#FFFFFF;border-radius:16px;box-shadow:0 6px 20px rgba(28,29,59,.06)">
+        <div style="padding:14px 16px;display:grid;grid-template-columns:minmax(0,1fr) 44px;gap:12px;align-items:center">
+          <div><div style="font-size:11px;color:#A3A6BC">วัด · หลวงพระบาง</div><div style="font-size:15px;font-weight:600;margin-top:2px">วัดเชียงทอง</div></div>
+          <div style="width:44px;height:44px;border-radius:12px;background:oklch(0.95 0.035 75);color:oklch(0.6 0.12 75);display:grid;place-items:center;font-family:'Material Symbols Rounded';font-size:22px">temple_buddhist</div>
+        </div>
+        <div style="padding:10px 16px 12px;border-top:1px solid #EEF0F5;display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+          <div><div style="font-size:11px;color:#A3A6BC">เวลาเปิด</div><div style="font-size:12px;font-weight:500">08:00–17:00</div></div>
+          <div><div style="font-size:11px;color:#A3A6BC">ค่าเข้า</div><div style="font-size:12px;font-weight:500">20,000 กีบ</div></div>
+          <div><div style="font-size:11px;color:#A3A6BC">เวลาแนะนำ</div><div style="font-size:12px;font-weight:500">45 นาที <span style="padding:1px 6px;border-radius:6px;background:#E3F6EE;color:#1E9466;font-size:11px">ในทริป</span></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:24px">
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div style="font-size:14px;font-weight:600">จุดแวะ + ช่วงเดินทาง + แนะนำระหว่างทาง</div>
+      <div style="display:flex;flex-direction:column;background:#F7F8FC;padding:12px;border-radius:16px">
+        <div style="background:#FFFFFF;border-radius:14px;box-shadow:0 4px 14px rgba(28,29,59,.05);padding:12px 14px;display:flex;gap:12px;align-items:center">
+          <div style="width:26px;height:26px;border-radius:50%;background:#2F8466;color:#fff;display:grid;place-items:center;font-size:11px;font-weight:700">1</div>
+          <div style="flex:1"><div style="font-size:15px;font-weight:600">พระราชวังหลวง</div><div style="font-size:12px;color:#9A9DB4">พิพิธภัณฑ์ · 1 ชม.</div></div>
+          <div style="text-align:right"><div style="font-size:14px;font-weight:600">09:00</div><div style="font-size:11px;color:#A3A6BC">ถึง 10:00</div></div>
+        </div>
+        <div style="display:flex;gap:12px;padding:0 14px">
+          <div style="width:26px;display:flex;justify-content:center"><div style="border-left:1.5px dashed #C4C7D6"></div></div>
+          <div style="flex:1;padding:8px 0;display:flex;flex-direction:column;gap:6px">
+            <div style="font-size:12px;color:#5B5F7B;display:flex;align-items:center;gap:4px"><span style="font-family:'Material Symbols Rounded';font-size:15px;color:#2F8466">directions_car</span>ไปจุดถัดไป 1.1 กม. · รถ 4 นาที</div>
+            <div style="display:flex;align-items:center;gap:8px;padding:6px 6px 6px 10px;border-radius:10px;background:#E5F2EC"><span style="font-family:'Material Symbols Rounded';font-size:16px;color:#2F8466">near_me</span><div style="flex:1;font-size:12px;color:#1F3A32"><b style="font-weight:600">ระหว่างทาง</b> วัดใหม่ฯ · ห่าง 90 ม.</div><span style="height:28px;padding:0 10px;border-radius:8px;background:#fff;color:#2F8466;font-size:12px;font-weight:600;display:flex;align-items:center">+ เพิ่ม</span></div>
+          </div>
+        </div>
+        <div style="background:#FFFFFF;border-radius:14px;box-shadow:0 4px 14px rgba(28,29,59,.05);padding:12px 14px;display:flex;gap:12px;align-items:center">
+          <div style="width:26px;height:26px;border-radius:6px;background:#fff;border:2px solid #1C1D3B;display:grid;place-items:center;font-size:11px;font-weight:700">2</div>
+          <div style="flex:1"><div style="font-size:15px;font-weight:600">พระธาตุภูษี</div><div style="font-size:12px;color:#9A9DB4">จุดชมวิว · 1 ชม.</div></div>
+          <div style="text-align:right"><div style="font-size:14px;font-weight:600">10:04</div><div style="font-size:11px;color:#A3A6BC">ถึง 11:04</div></div>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div style="font-size:14px;font-weight:600">การ์ดลอย + หมุดแผนที่</div>
+      <div style="background:#1F3A32;color:#fff;border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:12px;box-shadow:0 20px 50px rgba(28,29,59,.35)">
+        <div style="display:flex;gap:12px;align-items:center"><div style="width:52px;height:52px;border-radius:10px;background:#2F8466;display:grid;place-items:center;font-family:'Material Symbols Rounded';font-size:26px">route</div><div><div style="font-size:12px;color:#A9CBBE">วันที่ 1 · 5 จุด</div><div style="font-size:18px;font-weight:700">16 นาที <span style="font-weight:500;font-size:14px">(3.6 กม.)</span></div></div></div>
+        <div style="display:grid;grid-template-columns:18px 1fr;gap:6px 10px;align-items:center"><span style="width:14px;height:14px;border-radius:50%;background:#2F8466;border:3px solid #8ED3B5"></span><div style="padding:7px 10px;border-radius:8px;background:#2B4B42;font-size:12px">พระราชวังหลวง</div><span style="font-family:'Material Symbols Rounded';font-size:16px;color:#A9CBBE">location_on</span><div style="padding:7px 10px;border-radius:8px;background:#2B4B42;font-size:12px">ตลาดมืดหลวงพระบาง</div></div>
+      </div>
+      <div style="display:flex;gap:24px;align-items:center;padding:18px;border-radius:14px;background:#ECEEF3;flex-wrap:wrap">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:6px"><div style="width:30px;height:30px;border-radius:50%;background:rgba(47,132,102,.18);display:grid;place-items:center"><div style="width:18px;height:18px;border-radius:50%;background:#2F8466;border:2.5px solid #fff"></div></div><span style="font-size:11px;color:#5B5F7B">จุดแรก/สุดท้าย</span></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:6px"><div style="width:22px;height:22px;border-radius:5px;background:#fff;border:2.5px solid #1C1D3B;display:grid;place-items:center;font-size:11px;font-weight:700">2</div><span style="font-size:11px;color:#5B5F7B">จุดระหว่างทาง</span></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:6px"><div style="width:28px;height:28px;border-radius:50%;background:oklch(0.6 0.12 45);border:2px solid #fff;color:#fff;display:grid;place-items:center;font-family:'Material Symbols Rounded';font-size:15px">local_cafe</div><span style="font-size:11px;color:#5B5F7B">สถานที่</span></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:6px"><div style="width:44px;height:3.5px;background:#2F8466;box-shadow:0 0 0 5px rgba(47,132,102,.12);border-radius:2px;margin:6px 0"></div><span style="font-size:11px;color:#5B5F7B">เส้นทาง</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer style="font-size:13px;color:#9A9DB4;border-top:1px solid #ECEEF5;padding-top:20px;line-height:1.7">แผนที่: Esri Canvas Light Gray (ทดสอบ) · เส้นทาง: OSRM · ไอคอน: Material Symbols Rounded</footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const cats = [
+      ['temple','วัด','temple_buddhist',75],['cafe','คาเฟ่','local_cafe',45],['food','ร้านอาหาร','restaurant',25],
+      ['stay','ที่พัก','hotel',320],['nature','น้ำตก/ธรรมชาติ','water',155],['market','ตลาด','storefront',355],
+      ['view','จุดชมวิว','landscape',215],['museum','พิพิธภัณฑ์','museum',260],['gift','ร้านของฝาก','redeem',110]
+    ].map(([key,label,icon,h]) => ({ key, label, icon, h, color: `oklch(0.6 0.12 ${h})`, soft: `oklch(0.95 0.035 ${h})` }));
+    return {
+      cats,
+      greens: [
+        { name:'primary', hex:'#2F8466', use:'แถบเมนู ปุ่มหลัก เส้นทาง' }, { name:'hover', hex:'#246B52', use:'hover / pressed' },
+        { name:'deep', hex:'#1F3A32', use:'การ์ดลอย toast' }, { name:'mint', hex:'#8ED3B5', use:'จุดเน้นบนพื้นเข้ม' },
+        { name:'ring', hex:'#D3EBDF', use:'focus ring' }, { name:'soft', hex:'#E5F2EC', use:'ปุ่มรอง ตัวกรองที่เลือก' },
+        { name:'on-rail', hex:'#E1F0EA', use:'เมนูที่ไม่ได้เลือก' }
+      ],
+      neutrals: [
+        { name:'bg', hex:'#F5F6FA', use:'พื้นหลังแอป' }, { name:'panel', hex:'#F7F8FC', use:'แผง ช่องกรอก' }, { name:'surface', hex:'#FFFFFF', use:'การ์ด' },
+        { name:'map', hex:'#ECEEF3', use:'พื้นแผนที่' }, { name:'line', hex:'#EEF0F5', use:'เส้นแบ่งในการ์ด' }, { name:'border', hex:'#E3E5EF', use:'ขอบช่องกรอก ปุ่ม' },
+        { name:'label', hex:'#A3A6BC', use:'ป้ายเล็ก' }, { name:'muted', hex:'#5B5F7B', use:'ข้อความรอง' }, { name:'ink', hex:'#1C1D3B', use:'หัวข้อ เนื้อหา' }
+      ],
+      darks: [ { hex:'#1F3A32', use:'พื้น' }, { hex:'#2B4B42', use:'ช่อง' }, { hex:'#46685E', use:'ขอบ' }, { hex:'#A9CBBE', use:'รอง' }, { hex:'#D3E6DE', use:'อ่อน' } ],
+      typeScale: [
+        { name:'display', spec:'40 / 1.25 · 700', size:'40px', lh:'1.25', weight:700, color:'#1C1D3B', sample:'หลวงพระบาง 2 วัน 1 คืน' },
+        { name:'stat', spec:'28 · 700 + หน่วย 13', size:'28px', lh:'1.2', weight:700, color:'#1C1D3B', sample:'3.6 กม.' },
+        { name:'h2', spec:'20 / 1.35 · 700', size:'20px', lh:'1.35', weight:700, color:'#1C1D3B', sample:'ใกล้เส้นทาง · วันที่ 1' },
+        { name:'title', spec:'15 / 1.4 · 600', size:'15px', lh:'1.4', weight:600, color:'#1C1D3B', sample:'วัดเชียงทอง' },
+        { name:'body', spec:'14 / 1.6 · 400', size:'14px', lh:'1.6', weight:400, color:'#5B5F7B', sample:'วัดสำคัญที่สุดของหลวงพระบาง ตั้งอยู่ริมแม่น้ำโขง' },
+        { name:'value', spec:'12–13 / 1.5 · 500', size:'13px', lh:'1.5', weight:500, color:'#1C1D3B', sample:'08:00–17:00 · 20,000 กีบ' },
+        { name:'label', spec:'11 / 1.4 · 400 #A3A6BC', size:'11px', lh:'1.4', weight:400, color:'#A3A6BC', sample:'เวลาเปิด' },
+        { name:'nav', spec:'10–11 · 400/600', size:'11px', lh:'1.3', weight:600, color:'#2F8466', sample:'สถานที่ · เส้นทาง · สรุป · เพิ่ม' }
+      ],
+      spacing: [4,8,10,12,14,16,20,24].map((v) => ({ name: v + '', px: v + 'px' })),
+      radii: [{name:'pill',px:'6px'},{name:'input',px:'10px'},{name:'item',px:'12px'},{name:'card',px:'16px'},{name:'section',px:'20px'}],
+      shadows: [
+        { name:'card', css:'0 6px 20px rgba(28,29,59,.06)', bg:'#FFFFFF', fg:'#5B5F7B' },
+        { name:'map overlay', css:'0 6px 20px rgba(28,29,59,.10)', bg:'#FFFFFF', fg:'#5B5F7B' },
+        { name:'dropdown', css:'0 16px 40px rgba(28,29,59,.16)', bg:'#FFFFFF', fg:'#5B5F7B' },
+        { name:'dark card', css:'0 20px 50px rgba(28,29,59,.35)', bg:'#1F3A32', fg:'#A9CBBE' }
+      ],
+      nav: [['map','สถานที่',false],['route','เส้นทาง',true],['description','สรุป',false],['add_location_alt','เพิ่ม',false]]
+        .map(([icon, short, on]) => ({ icon, short, bg: on ? 'rgba(0,0,0,.16)' : 'transparent', fg: on ? '#FFFFFF' : '#E1F0EA', weight: on ? 600 : 400 }))
+    };
+  }
+}
+</script>
+</body>
+</html>
