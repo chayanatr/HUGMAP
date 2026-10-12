@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 import { Anuphan } from 'next/font/google';
-import 'leaflet/dist/leaflet.css';
 import './globals.css';
 import { AppNav } from '@/components/AppNav';
 import { ToastProvider } from '@/components/ui/Toast';
