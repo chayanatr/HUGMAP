@@ -25,28 +25,38 @@ function Fit({ points, fitKey }: { points: [number, number][]; fitKey: string })
   }, [fitKey]);
   return null;
 }
+/** เลื่อนแผนที่ไปหาจุดที่เลือก ถ้าอยู่นอกกรอบที่เห็น (ไม่ซูม) */
+function Focus({ point }: { point?: { lat: number; lng: number } | null }) {
+  const map = useMap();
+  useEffect(() => {
+    if (point && !map.getBounds().contains([point.lat, point.lng])) map.panTo([point.lat, point.lng]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [point?.lat, point?.lng]);
+  return null;
+}
 function Picker({ onPick }: { onPick?: (lat: number, lng: number) => void }) {
   useMapEvents({ click: (e) => onPick?.(e.latlng.lat, e.latlng.lng) });
   return null;
 }
 
 export default function MapView({
-  theme = 'light', stops = [], places = [], nearby = [], routeLine, pin, fitKey = 'default', onSelect, onPick,
+  theme = 'light', stops = [], places = [], nearby = [], routeLine, pin, fitKey = 'default', focus, onSelect, onPick,
 }: {
   theme?: 'light' | 'dark'; stops?: Pt[]; places?: Pt[]; nearby?: Pt[]; routeLine?: [number, number][];
-  pin?: { lat: number; lng: number } | null; fitKey?: string;
+  pin?: { lat: number; lng: number } | null; fitKey?: string; focus?: { lat: number; lng: number } | null;
   onSelect?: (id: string) => void; onPick?: (lat: number, lng: number) => void;
 }) {
   const dark = theme === 'dark';
   const ring = dark ? '#141938' : '#fff';
   const line = routeLine ?? stops.map((s) => [s.lat, s.lng] as [number, number]);
-  const fitPts: [number, number][] = stops.length ? stops.map((s) => [s.lat, s.lng]) : places.length ? places.map((p) => [p.lat, p.lng]) : pin ? [[pin.lat, pin.lng]] : [];
+  const fitPts: [number, number][] = stops.length ? stops.map((s) => [s.lat, s.lng]) : pin ? [[pin.lat, pin.lng]] : places.map((p) => [p.lat, p.lng]);
   return (
     <MapContainer center={[19.89, 102.14]} zoom={14} zoomControl={false} className="h-full w-full">
       {/* ทดสอบ: Esri Canvas (ไม่ต้องใช้ key) · production: MapTiler / Stadia / self-host ตามปริมาณใช้งาน */}
       <TileLayer url={`https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/${dark ? 'World_Dark_Gray_Base' : 'World_Light_Gray_Base'}/MapServer/tile/{z}/{y}/{x}`} maxZoom={19} maxNativeZoom={16} attribution="Tiles © Esri — Esri, HERE, Garmin, © OpenStreetMap contributors" />
       <TileLayer url={`https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/${dark ? 'World_Dark_Gray_Reference' : 'World_Light_Gray_Reference'}/MapServer/tile/{z}/{y}/{x}`} maxZoom={19} maxNativeZoom={16} />
       <Fit points={fitPts} fitKey={fitKey} />
+      <Focus point={focus} />
       <Picker onPick={onPick} />
       {places.map((p) => {
         const c = CAT[p.category ?? 'temple']; const s = p.selected ? 36 : 26;

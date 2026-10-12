@@ -11,7 +11,7 @@ const base =
 const variants: Record<ButtonVariant, string> = {
   primary: 'h-11 rounded-input bg-brand px-5 text-[14px] font-semibold text-white hover:bg-brand-hover',
   outline: 'h-11 rounded-input border border-line-border bg-surface px-4 text-[14px] text-ink hover:bg-bg',
-  soft: 'h-11 rounded-[8px] bg-brand-soft px-3 text-[13px] font-semibold text-brand hover:bg-brand-ring md:h-9',
+  soft: 'h-11 rounded-[8px] bg-brand-soft px-3 text-[13px] font-semibold text-brand-hover hover:bg-brand-ring md:h-9',
   danger: 'h-11 rounded-input px-3 text-[14px] text-danger-text hover:bg-danger-soft',
   'dark-outline': 'h-11 rounded-input border border-dark-line px-4 text-[14px] text-white hover:bg-dark-field',
   light: 'h-11 rounded-input bg-surface px-4 text-[14px] font-semibold text-brand-deep hover:bg-brand-soft',

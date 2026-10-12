@@ -1,3 +1,6 @@
 // เพิ่มสถานที่ /places/new
-// สร้าง UI ตาม design_handoff_champa_route/README.md และ design/Champa Route.dc.html
-export { default } from '../PlaceForm';
+import PlaceForm from '../PlaceForm';
+
+export default function NewPlacePage() {
+  return <PlaceForm />;
+}
