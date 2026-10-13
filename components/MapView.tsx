@@ -1,12 +1,14 @@
 'use client';
 // แผนที่ Google Maps (Maps JavaScript API ผ่าน @vis.gl/react-google-maps)
 // ใช้ผ่าน: const MapView = dynamic(() => import('@/components/MapView'), { ssr: false });
-import { AdvancedMarker, AdvancedMarkerAnchorPoint, ControlPosition, Map, Pin, useMap } from '@vis.gl/react-google-maps';
-import { useEffect, useMemo, type CSSProperties, type ReactNode } from 'react';
+import { AdvancedMarker, AdvancedMarkerAnchorPoint, ControlPosition, Map, MapControl, Pin, useMap } from '@vis.gl/react-google-maps';
+import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
 import { CAT } from '@/lib/categories';
 import { cn } from '@/lib/cn';
+import { fixMessage, geoErrorMessage, getMyPosition, type Fix } from '@/lib/geolocation';
 import type { CategoryKey } from '@/lib/types';
 import { Icon } from '@/components/ui/Icon';
+import { useToast } from '@/components/ui/Toast';
 
 const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 // Map ID (Vector) จาก Google Cloud Console → Map Management — จำเป็นสำหรับ AdvancedMarker
@@ -81,11 +83,76 @@ function Dot({ size, className, style, children }: { size: number; className?: s
   );
 }
 
+/** ปุ่ม "ตำแหน่งของฉัน" (GPS): จุดตำแหน่ง + วงกลมความแม่นยำ แล้วเลื่อนแผนที่ไปหา — ตำแหน่งไม่ถูกส่งหรือบันทึกที่ไหน */
+function MyLocation() {
+  const map = useMap();
+  const toast = useToast();
+  const [status, setStatus] = useState<'idle' | 'loading' | 'active'>('idle');
+  const [me, setMe] = useState<Fix | null>(null);
+
+  useEffect(() => {
+    if (!map || !me) return;
+    const circle = new google.maps.Circle({
+      map,
+      center: me,
+      radius: Math.min(me.accuracy, 2000),
+      strokeColor: ROUTE_COLOR,
+      strokeOpacity: 0.35,
+      strokeWeight: 1,
+      fillColor: ROUTE_COLOR,
+      fillOpacity: 0.12,
+      clickable: false,
+    });
+    return () => circle.setMap(null);
+  }, [map, me]);
+
+  async function locate() {
+    if (status === 'loading') return;
+    setStatus('loading');
+    try {
+      const fix = await getMyPosition();
+      setMe(fix);
+      setStatus('active');
+      map?.panTo(fix);
+      if ((map?.getZoom() ?? 0) < 15) map?.setZoom(fix.accuracy < 200 ? 16 : 14);
+      toast(fixMessage(fix), fix.accuracy > 100 ? 'error' : 'success');
+    } catch (e) {
+      setStatus(me ? 'active' : 'idle');
+      toast(geoErrorMessage(e), 'error');
+    }
+  }
+
+  return (
+    <>
+      <MapControl position={ControlPosition.RIGHT_TOP}>
+        <button
+          type="button"
+          onClick={locate}
+          aria-label="ตำแหน่งของฉัน (GPS)"
+          title="ตำแหน่งของฉัน (GPS)"
+          className="mr-2.5 mt-2.5 grid h-11 w-11 place-items-center rounded-input border border-line-border bg-surface text-brand-hover shadow-overlay focus-visible:outline-none focus-visible:shadow-focus md:h-10 md:w-10"
+        >
+          <Icon name={status === 'loading' ? 'location_searching' : status === 'active' ? 'gps_fixed' : 'my_location'} className={cn('text-[22px]', status === 'loading' && 'animate-pulse')} />
+        </button>
+      </MapControl>
+      {me && (
+        <AdvancedMarker position={me} title="ตำแหน่งของฉัน" zIndex={2500} anchorPoint={AdvancedMarkerAnchorPoint.CENTER}>
+          <Dot size={18} className="border-white bg-brand">
+            {null}
+          </Dot>
+        </AdvancedMarker>
+      )}
+    </>
+  );
+}
+
 export default function MapView({
-  theme = 'light', stops = [], places = [], nearby = [], routeLine, pin, fitKey = 'default', focus, onSelect, onPick,
+  theme = 'light', stops = [], places = [], nearby = [], routeLine, pin, fitKey = 'default', focus, myLocation = false, onSelect, onPick,
 }: {
   theme?: 'light' | 'dark'; stops?: Pt[]; places?: Pt[]; nearby?: Pt[]; routeLine?: [number, number][];
   pin?: LL | null; fitKey?: string; focus?: LL | null;
+  /** แสดงปุ่ม "ตำแหน่งของฉัน" (GPS) — ใช้ในหน้าที่พนักงานใช้ (ไม่ใช้ในหน้าสรุป/ลิงก์ลูกค้า) */
+  myLocation?: boolean;
   onSelect?: (id: string) => void; onPick?: (lat: number, lng: number) => void;
 }) {
   const line = useMemo<LL[]>(
@@ -122,6 +189,7 @@ export default function MapView({
       >
         <Fit points={fitPts} fitKey={fitKey} />
         <Focus point={focus} />
+        {myLocation && <MyLocation />}
 
         {places.map((p) => {
           const c = CAT[p.category ?? 'temple'];

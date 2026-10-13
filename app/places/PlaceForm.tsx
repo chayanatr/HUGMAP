@@ -13,6 +13,7 @@ import { Select } from '@/components/ui/Select';
 import { useToast } from '@/components/ui/Toast';
 import { CATEGORIES, CITIES, LAO_BOUNDS } from '@/lib/categories';
 import { cn } from '@/lib/cn';
+import { fixMessage, geoErrorMessage, getMyPosition } from '@/lib/geolocation';
 import {
   PHOTO_MAX_BYTES,
   PHOTO_MAX_COUNT,
@@ -109,6 +110,21 @@ export default function PlaceForm({ placeId }: { placeId?: string }) {
   const contextPlaces = useMemo(() => places.filter((p) => p.id !== placeId), [places, placeId]);
 
   const pick = (lat: number, lng: number) => setForm((f) => ({ ...f, lat: lat.toFixed(6), lng: lng.toFixed(6) }));
+
+  // ใช้ตำแหน่งปัจจุบัน (GPS) เป็นพิกัดสถานที่ — เหมาะเมื่อพนักงานยืนอยู่ที่สถานที่นั้น
+  const [locating, setLocating] = useState(false);
+  async function fillFromGps() {
+    setLocating(true);
+    try {
+      const fix = await getMyPosition();
+      pick(fix.lat, fix.lng);
+      toast(fixMessage(fix), fix.accuracy > 100 ? 'error' : 'success');
+    } catch (e) {
+      toast(geoErrorMessage(e), 'error');
+    } finally {
+      setLocating(false);
+    }
+  }
 
   const addPhotos = (list: FileList | null) => {
     if (!list) return;
@@ -240,6 +256,9 @@ export default function PlaceForm({ placeId }: { placeId?: string }) {
               <Input aria-label="ละติจูด" placeholder="ละติจูด" inputMode="decimal" className="tabular-nums" invalid={!!errors.coord} value={form.lat} onChange={(e) => set('lat', e.target.value)} />
               <Input aria-label="ลองจิจูด" placeholder="ลองจิจูด" inputMode="decimal" className="tabular-nums" invalid={!!errors.coord} value={form.lng} onChange={(e) => set('lng', e.target.value)} />
             </div>
+            <Button variant="soft" icon="my_location" onClick={fillFromGps} disabled={locating} className="mt-1 self-start">
+              {locating ? 'กำลังหาตำแหน่ง…' : 'ใช้ตำแหน่งปัจจุบัน (GPS)'}
+            </Button>
             {errors.coord && (
               <span role="alert" className="text-[12px] text-danger-text">
                 {errors.coord}
@@ -333,7 +352,9 @@ export default function PlaceForm({ placeId }: { placeId?: string }) {
             places={contextPlaces}
             pin={pin}
             fitKey={`${placesStatus}|${loadState}`}
+            focus={pin}
             onPick={pick}
+            myLocation
           />
           <div className="pointer-events-none absolute left-4 top-4 z-[1000] flex max-w-[calc(100%-5.5rem)] items-center gap-2 rounded-item bg-brand-deep px-3.5 py-2.5 text-[13px] leading-snug text-white shadow-overlay">
             <Icon name="touch_app" className="shrink-0 text-[18px] text-brand-mint" />

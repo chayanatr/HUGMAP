@@ -92,7 +92,7 @@ export default function PlacesPage() {
       }
       map={
         <>
-          <MapView places={mapPlaces} focus={selected} fitKey={`${status}|${city}|${cats.join(',')}`} onSelect={setSelectedId} />
+          <MapView places={mapPlaces} focus={selected} fitKey={`${status}|${city}|${cats.join(',')}`} onSelect={setSelectedId} myLocation />
           {selected && (
             <PlaceDetailCard
               place={selected}
