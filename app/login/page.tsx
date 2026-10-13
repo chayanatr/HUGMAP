@@ -1,9 +1,9 @@
 'use client';
 // เข้าสู่ระบบ /login — บัญชีสร้างโดยผู้ดูแลระบบเท่านั้น (ไม่มีสมัครเอง)
+import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useState, type FormEvent } from 'react';
 import { Button } from '@/components/ui/Button';
-import { Icon } from '@/components/ui/Icon';
 import { Input } from '@/components/ui/Input';
 import { roleOf } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
@@ -46,14 +46,11 @@ function LoginForm() {
 
   return (
     <form noValidate onSubmit={onSubmit} className="flex w-full max-w-[400px] flex-col gap-4 rounded-section bg-surface p-6 shadow-card">
-      <div className="flex items-center gap-3">
-        <div className="grid h-11 w-11 place-items-center rounded-item bg-brand text-white">
-          <Icon name="map" className="text-[26px]" />
-        </div>
-        <div>
-          <div className="text-[18px] font-bold tracking-[.08em]">HUGMAP</div>
-          <div className="text-label">ระบบจัดเส้นทางท่องเที่ยว สปป.ลาว</div>
-        </div>
+      <div className="flex flex-col items-center gap-1 text-center">
+        {/* unoptimized: ไฟล์โลโก้ถูกย่อให้พอดีแล้ว เสิร์ฟตรง ๆ ไม่ผ่าน /_next/image (ที่ทำให้รูปโปร่งใสไม่แสดงในการทดสอบ) */}
+        <Image src="/brand/huglao-logo.png" alt="HUGLAO" width={560} height={528} priority unoptimized className="h-[132px] w-auto" />
+        <div className="text-[13px] font-bold tracking-[.08em] text-brand-hover">HUGMAP</div>
+        <div className="text-label">ระบบจัดเส้นทางท่องเที่ยว สปป.ลาว</div>
       </div>
       <h1 className="text-h2">เข้าสู่ระบบ</h1>
       {(noRole || error) && (
