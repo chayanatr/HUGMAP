@@ -4,9 +4,10 @@ import { cn } from '@/lib/cn';
 const field =
   'w-full rounded-input border bg-panel px-3.5 text-[15px] text-ink outline-none transition-shadow placeholder:text-placeholder focus:border-brand focus:bg-surface focus:shadow-focus';
 
-type Common = { label?: string; error?: string; required?: boolean };
+/** invalid = ขอบแดงโดยไม่แสดงข้อความ (ใช้เมื่อหลายช่องแชร์ข้อความ error เดียว) */
+type Common = { label?: string; error?: string; required?: boolean; invalid?: boolean };
 
-export function Input({ label, error, required, className, id, ...rest }: Common & InputHTMLAttributes<HTMLInputElement>) {
+export function Input({ label, error, invalid, required, className, id, ...rest }: Common & InputHTMLAttributes<HTMLInputElement>) {
   const auto = useId();
   const fid = id ?? auto;
   return (
@@ -19,9 +20,9 @@ export function Input({ label, error, required, className, id, ...rest }: Common
       )}
       <input
         id={fid}
-        aria-invalid={!!error}
+        aria-invalid={!!error || !!invalid}
         aria-describedby={error ? `${fid}-err` : undefined}
-        className={cn(field, 'h-11', error ? 'border-danger' : 'border-line-border', className)}
+        className={cn(field, 'h-11', error || invalid ? 'border-danger' : 'border-line-border', className)}
         {...rest}
       />
       {error && (

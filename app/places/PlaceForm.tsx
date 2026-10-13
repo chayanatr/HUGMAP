@@ -1,7 +1,34 @@
-// ฟอร์มสถานที่ (ใช้ร่วมกันทั้งเพิ่ม/แก้ไข)
-// สร้าง UI ตาม design_handoff_champa_route/README.md และ design/Champa Route.dc.html
 'use client';
-import { LAO_BOUNDS } from '@/lib/categories';
+// ฟอร์มสถานที่ (ใช้ร่วมกันทั้งเพิ่ม/แก้ไข) — README §2
+import dynamic from 'next/dynamic';
+import { useRouter } from 'next/navigation';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { PageShell, PanelBody, PanelHeader } from '@/components/shell/PageShell';
+import { Button } from '@/components/ui/Button';
+import { Card } from '@/components/ui/Card';
+import { Icon } from '@/components/ui/Icon';
+import { IconButton } from '@/components/ui/IconButton';
+import { Input, Textarea } from '@/components/ui/Input';
+import { Select } from '@/components/ui/Select';
+import { useToast } from '@/components/ui/Toast';
+import { CATEGORIES, CITIES, LAO_BOUNDS } from '@/lib/categories';
+import { cn } from '@/lib/cn';
+import {
+  PHOTO_MAX_BYTES,
+  PHOTO_MAX_COUNT,
+  PHOTO_TYPES,
+  createPlace,
+  deletePlace,
+  fetchPlace,
+  removePlacePhotos,
+  updatePlace,
+  uploadPlacePhoto,
+  type PlaceInput,
+} from '@/lib/places';
+import type { CategoryKey, CityKey } from '@/lib/types';
+import { usePlaces } from '@/lib/usePlaces';
+
+const MapView = dynamic(() => import('@/components/MapView'), { ssr: false });
 
 export function validatePlace(f: { name: string; lat: string; lng: string; duration: string }) {
   const e: Record<string, string> = {};
@@ -14,7 +41,323 @@ export function validatePlace(f: { name: string; lat: string; lng: string; durat
   return e;
 }
 
-export default function PlaceForm() {
-  // TODO: ฟิลด์ตาม README §2, แผนที่ pick mode (MapView onPick + pin), upload ไป Storage 'place-photos'
-  return null;
+interface FormState {
+  name: string;
+  category: CategoryKey;
+  city: CityKey;
+  lat: string;
+  lng: string;
+  open: string;
+  fee: string;
+  duration: string;
+  desc: string;
+}
+const EMPTY: FormState = { name: '', category: 'temple', city: 'lp', lat: '', lng: '', open: '', fee: '', duration: '30', desc: '' };
+const CITY_OPTIONS = CITIES.map((c) => ({ value: c.key, label: c.label }));
+
+type LoadState = 'loading' | 'ready' | 'missing' | 'error';
+
+export default function PlaceForm({ placeId }: { placeId?: string }) {
+  const router = useRouter();
+  const toast = useToast();
+  const editing = !!placeId;
+  const { places, status: placesStatus } = usePlaces();
+
+  const [form, setForm] = useState<FormState>(EMPTY);
+  const [loadState, setLoadState] = useState<LoadState>(editing ? 'loading' : 'ready');
+  const [savedPhotos, setSavedPhotos] = useState<string[]>([]);
+  const [newPhotos, setNewPhotos] = useState<{ file: File; preview: string }[]>([]);
+  const [photoError, setPhotoError] = useState('');
+  const [submitted, setSubmitted] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
+
+  useEffect(() => {
+    if (!placeId) return;
+    let cancelled = false;
+    fetchPlace(placeId)
+      .then((p) => {
+        if (cancelled) return;
+        if (!p) return setLoadState('missing');
+        setForm({
+          name: p.name,
+          category: p.category,
+          city: p.city,
+          lat: String(p.lat),
+          lng: String(p.lng),
+          open: p.open_hours ?? '',
+          fee: p.fee ?? '',
+          duration: String(p.duration_min),
+          desc: p.description ?? '',
+        });
+        setSavedPhotos(p.photos);
+        setLoadState('ready');
+      })
+      .catch(() => !cancelled && setLoadState('error'));
+    return () => {
+      cancelled = true;
+    };
+  }, [placeId]);
+
+  useEffect(() => () => newPhotos.forEach((p) => URL.revokeObjectURL(p.preview)), [newPhotos]);
+
+  const set = <K extends keyof FormState>(k: K, v: FormState[K]) => setForm((f) => ({ ...f, [k]: v }));
+  const errors = submitted ? validatePlace(form) : {};
+
+  const latN = parseFloat(form.lat), lngN = parseFloat(form.lng);
+  const pin = Number.isFinite(latN) && Number.isFinite(lngN) ? { lat: latN, lng: lngN } : null;
+  const contextPlaces = useMemo(() => places.filter((p) => p.id !== placeId), [places, placeId]);
+
+  const pick = (lat: number, lng: number) => setForm((f) => ({ ...f, lat: lat.toFixed(6), lng: lng.toFixed(6) }));
+
+  const addPhotos = (list: FileList | null) => {
+    if (!list) return;
+    let err = '';
+    const next = [...newPhotos];
+    for (const file of Array.from(list)) {
+      if (!PHOTO_TYPES.includes(file.type) || file.size > PHOTO_MAX_BYTES) {
+        err = 'ไฟล์ต้องเป็น JPG, PNG หรือ WebP ขนาดไม่เกิน 5 MB';
+        continue;
+      }
+      if (savedPhotos.length + next.length >= PHOTO_MAX_COUNT) {
+        err = `แนบรูปได้สูงสุด ${PHOTO_MAX_COUNT} รูป`;
+        break;
+      }
+      next.push({ file, preview: URL.createObjectURL(file) });
+    }
+    setPhotoError(err);
+    setNewPhotos(next);
+  };
+
+  async function onSubmit(e: FormEvent) {
+    e.preventDefault();
+    setSubmitted(true);
+    setSaveError('');
+    if (Object.keys(validatePlace(form)).length) {
+      setTimeout(() => document.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus(), 0);
+      return;
+    }
+    setSaving(true);
+    let uploaded: string[] = [];
+    try {
+      uploaded = await Promise.all(newPhotos.map((p) => uploadPlacePhoto(p.file)));
+      const input: PlaceInput = {
+        name: form.name.trim(),
+        category: form.category,
+        city: form.city,
+        lat: latN,
+        lng: lngN,
+        open_hours: form.open.trim() || null,
+        fee: form.fee.trim() || null,
+        duration_min: form.duration ? Math.round(+form.duration) : 30,
+        description: form.desc.trim() || null,
+        photos: [...savedPhotos, ...uploaded],
+      };
+      if (placeId) await updatePlace(placeId, input);
+      else await createPlace(input);
+      toast('บันทึกสถานที่แล้ว');
+      router.push('/places');
+    } catch {
+      removePlacePhotos(uploaded).catch(() => {});
+      setSaveError('บันทึกไม่สำเร็จ กรุณาลองอีกครั้ง');
+      setSaving(false);
+    }
+  }
+
+  async function onDelete() {
+    if (!placeId) return;
+    if (!window.confirm(`ลบ “${form.name}” ออกจากระบบ?\nสถานที่นี้จะถูกนำออกจากทริปที่ใช้อยู่ด้วย และไม่สามารถย้อนกลับได้`)) return;
+    setSaving(true);
+    try {
+      await deletePlace(placeId);
+      removePlacePhotos(savedPhotos).catch(() => {});
+      toast('ลบสถานที่แล้ว');
+      router.push('/places');
+    } catch {
+      setSaveError('ลบไม่สำเร็จ กรุณาลองอีกครั้ง');
+      setSaving(false);
+    }
+  }
+
+  const header = (
+    <PanelHeader>
+      <IconButton icon="arrow_back" label="กลับ" href="/places" />
+      <div className="min-w-0">
+        <div className="text-label">จัดการสถานที่</div>
+        <h1 className="truncate text-[16px] font-bold leading-tight">{editing ? `แก้ไข: ${form.name || '…'}` : 'เพิ่มสถานที่ใหม่'}</h1>
+      </div>
+    </PanelHeader>
+  );
+
+  const body =
+    loadState !== 'ready' ? (
+      <PanelBody>
+        <Card className="p-4 text-[14px] leading-[1.6] text-muted" role={loadState === 'loading' ? undefined : 'alert'}>
+          {loadState === 'loading' && 'กำลังโหลดข้อมูล…'}
+          {loadState === 'missing' && 'ไม่พบสถานที่นี้ อาจถูกลบไปแล้ว'}
+          {loadState === 'error' && 'โหลดข้อมูลสถานที่ไม่สำเร็จ'}
+        </Card>
+        {loadState !== 'loading' && <Button variant="outline" href="/places">กลับไปรายการสถานที่</Button>}
+      </PanelBody>
+    ) : (
+      <PanelBody>
+        <Card className="flex flex-col gap-4 p-4">
+          <Input label="ชื่อสถานที่" required placeholder="เช่น วัดเชียงทอง" value={form.name} onChange={(e) => set('name', e.target.value)} error={errors.name} />
+          <div className="flex flex-col gap-1.5">
+            <span className="text-[12px] font-medium text-muted">หมวด *</span>
+            <div className="grid grid-cols-3 gap-2" role="group" aria-label="หมวด">
+              {CATEGORIES.map((c) => {
+                const on = form.category === c.key;
+                return (
+                  <button
+                    key={c.key}
+                    type="button"
+                    aria-pressed={on}
+                    onClick={() => set('category', c.key)}
+                    className={cn(
+                      'flex h-16 flex-col items-center justify-center gap-1 rounded-item border-[1.5px] text-[11px] text-ink focus-visible:outline-none focus-visible:shadow-focus',
+                      on ? 'border-brand bg-brand-soft' : 'border-line-border bg-surface',
+                    )}
+                  >
+                    <span className="grid h-7 w-7 place-items-center rounded-[8px] text-[18px]" style={{ background: c.soft, color: c.color }}>
+                      <Icon name={c.icon} />
+                    </span>
+                    {c.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <Select label="เมือง / แขวง" options={CITY_OPTIONS} value={form.city} onChange={(e) => set('city', e.target.value as CityKey)} />
+        </Card>
+
+        <Card className="flex flex-col gap-4 p-4">
+          <fieldset className="flex flex-col gap-1.5">
+            <legend className="mb-1.5 text-[12px] font-medium text-muted">
+              พิกัด * <span className="font-normal text-label">· คลิกบนแผนที่เพื่อปักหมุด</span>
+            </legend>
+            <div className="grid grid-cols-2 gap-2">
+              <Input aria-label="ละติจูด" placeholder="ละติจูด" inputMode="decimal" className="tabular-nums" invalid={!!errors.coord} value={form.lat} onChange={(e) => set('lat', e.target.value)} />
+              <Input aria-label="ลองจิจูด" placeholder="ลองจิจูด" inputMode="decimal" className="tabular-nums" invalid={!!errors.coord} value={form.lng} onChange={(e) => set('lng', e.target.value)} />
+            </div>
+            {errors.coord && (
+              <span role="alert" className="text-[12px] text-danger-text">
+                {errors.coord}
+              </span>
+            )}
+          </fieldset>
+          <div className="grid grid-cols-2 gap-2">
+            <Input label="เวลาเปิด–ปิด" placeholder="08:00–17:00" value={form.open} onChange={(e) => set('open', e.target.value)} />
+            <Input label="ค่าเข้า" placeholder="20,000 กีบ" value={form.fee} onChange={(e) => set('fee', e.target.value)} />
+          </div>
+          <Input label="เวลาแนะนำ (นาที)" type="number" inputMode="numeric" min={1} value={form.duration} onChange={(e) => set('duration', e.target.value)} error={errors.duration} />
+          <Textarea label="รายละเอียด" rows={3} placeholder="ข้อมูลสำหรับไกด์และลูกค้า" value={form.desc} onChange={(e) => set('desc', e.target.value)} />
+
+          <div className="flex flex-col gap-2">
+            <span className="text-[12px] font-medium text-muted">รูปภาพ</span>
+            {(savedPhotos.length > 0 || newPhotos.length > 0) && (
+              <ul className="flex flex-wrap gap-2">
+                {savedPhotos.map((url) => (
+                  <PhotoThumb key={url} src={url} onRemove={() => setSavedPhotos((l) => l.filter((u) => u !== url))} />
+                ))}
+                {newPhotos.map((p) => (
+                  <PhotoThumb
+                    key={p.preview}
+                    src={p.preview}
+                    onRemove={() => {
+                      URL.revokeObjectURL(p.preview);
+                      setNewPhotos((l) => l.filter((x) => x !== p));
+                    }}
+                  />
+                ))}
+              </ul>
+            )}
+            <label className="flex min-h-[88px] cursor-pointer flex-col items-center justify-center gap-1 rounded-item border border-dashed border-line-dashsoft px-3 py-4 text-center text-[13px] text-muted hover:bg-bg">
+              <Icon name="add_photo_alternate" className="text-[26px] text-brand" />
+              เพิ่มรูปภาพ
+              <span className="text-[11px] text-label">JPG, PNG หรือ WebP ไม่เกิน 5 MB · สูงสุด {PHOTO_MAX_COUNT} รูป</span>
+              <input
+                type="file"
+                accept={PHOTO_TYPES.join(',')}
+                multiple
+                className="sr-only"
+                onChange={(e) => {
+                  addPhotos(e.target.files);
+                  e.target.value = '';
+                }}
+              />
+            </label>
+            {photoError && (
+              <span role="alert" className="text-[12px] text-danger-text">
+                {photoError}
+              </span>
+            )}
+          </div>
+        </Card>
+
+        {saveError && (
+          <p role="alert" className="rounded-item bg-danger-soft px-3.5 py-3 text-[13px] text-danger-text">
+            {saveError}
+          </p>
+        )}
+        <div className="flex items-center gap-2">
+          {editing && (
+            <Button variant="danger" onClick={onDelete} disabled={saving}>
+              ลบ
+            </Button>
+          )}
+          <div className="ml-auto flex gap-2">
+            <Button variant="outline" href="/places">
+              ยกเลิก
+            </Button>
+            <Button type="submit" disabled={saving}>
+              {saving ? 'กำลังบันทึก…' : 'บันทึกสถานที่'}
+            </Button>
+          </div>
+        </div>
+      </PanelBody>
+    );
+
+  return (
+    <PageShell
+      wide
+      panel={
+        <form noValidate onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col">
+          {header}
+          {body}
+        </form>
+      }
+      map={
+        <>
+          <MapView
+            places={contextPlaces}
+            pin={pin}
+            fitKey={`${placesStatus}|${loadState}`}
+            onPick={pick}
+          />
+          <div className="pointer-events-none absolute left-4 top-4 z-[1000] flex max-w-[calc(100%-5.5rem)] items-center gap-2 rounded-item bg-brand-deep px-3.5 py-2.5 text-[13px] leading-snug text-white shadow-overlay">
+            <Icon name="touch_app" className="shrink-0 text-[18px] text-brand-mint" />
+            คลิกบนแผนที่เพื่อปักหมุด หรือลากหมุดเพื่อปรับตำแหน่ง
+          </div>
+        </>
+      }
+    />
+  );
+}
+
+function PhotoThumb({ src, onRemove }: { src: string; onRemove: () => void }) {
+  return (
+    <li className="relative h-[72px] w-[72px] overflow-hidden rounded-item border border-line-border">
+      {/* eslint-disable-next-line @next/next/no-img-element -- blob/Storage URL */}
+      <img src={src} alt="" className="h-full w-full object-cover" />
+      <button
+        type="button"
+        onClick={onRemove}
+        aria-label="นำรูปออก"
+        className="absolute right-0.5 top-0.5 grid h-7 w-7 place-items-center rounded-full bg-brand-deep/80 text-white focus-visible:outline-none focus-visible:shadow-focus"
+      >
+        <Icon name="close" className="text-[16px]" />
+      </button>
+    </li>
+  );
 }

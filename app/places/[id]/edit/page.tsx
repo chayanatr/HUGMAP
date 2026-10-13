@@ -1,3 +1,6 @@
 // แก้ไขสถานที่ /places/[id]/edit
-// สร้าง UI ตาม design_handoff_champa_route/README.md และ design/Champa Route.dc.html
-export { default } from '../../PlaceForm';
+import PlaceForm from '../../PlaceForm';
+
+export default function EditPlacePage({ params }: { params: { id: string } }) {
+  return <PlaceForm placeId={params.id} />;
+}

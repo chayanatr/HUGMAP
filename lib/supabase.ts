@@ -1,7 +1,8 @@
 import { createBrowserClient } from '@supabase/ssr';
 
+let client: ReturnType<typeof createBrowserClient> | undefined;
 export const supabase = () =>
-  createBrowserClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
+  (client ??= createBrowserClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!));
 
 /** สถานที่ใกล้เส้นทางจริง (geojson LineString จาก OSRM) */
 export async function placesNearRoute(routeGeojson: unknown, radiusKm: number, excludeIds: string[]) {
