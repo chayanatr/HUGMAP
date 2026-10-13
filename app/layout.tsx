@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Anuphan } from 'next/font/google';
 import './globals.css';
 import { AppFrame } from '@/components/AppFrame';
+import { AuthProvider } from '@/lib/auth';
 import { ToastProvider } from '@/components/ui/Toast';
 
 const anuphan = Anuphan({ subsets: ['thai', 'latin'], weight: ['300', '400', '500', '600', '700'], variable: '--font-anuphan' });
@@ -16,9 +17,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,300..500,0..1,0&display=block" />
       </head>
       <body className="bg-bg text-ink font-sans antialiased">
-        <ToastProvider>
-          <AppFrame>{children}</AppFrame>
-        </ToastProvider>
+        <AuthProvider>
+          <ToastProvider>
+            <AppFrame>{children}</AppFrame>
+          </ToastProvider>
+        </AuthProvider>
       </body>
     </html>
   );

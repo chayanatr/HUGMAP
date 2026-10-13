@@ -10,6 +10,7 @@ import { PlaceFilters } from '@/components/places/PlaceFilters';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { IconButton } from '@/components/ui/IconButton';
+import { useAuth } from '@/lib/auth';
 import { usePlaces } from '@/lib/usePlaces';
 import type { CategoryKey } from '@/lib/types';
 
@@ -17,6 +18,7 @@ const MapView = dynamic(() => import('@/components/MapView'), { ssr: false });
 
 export default function PlacesPage() {
   const { places, status, reload } = usePlaces();
+  const isAdmin = useAuth().role === 'admin';
   const [q, setQ] = useState('');
   const [city, setCity] = useState('');
   const [cats, setCats] = useState<CategoryKey[]>([]);
@@ -57,7 +59,7 @@ export default function PlacesPage() {
         <>
           <PanelHeader>
             <SearchField label="ค้นหาชื่อสถานที่" placeholder="ค้นหาสถานที่…" value={q} onChange={(e) => setQ(e.target.value)} />
-            <IconButton variant="primary" icon="add_location_alt" label="เพิ่มสถานที่" href="/places/new" />
+            {isAdmin && <IconButton variant="primary" icon="add_location_alt" label="เพิ่มสถานที่" href="/places/new" />}
           </PanelHeader>
           <PanelBody>
             <PlaceFilters city={city} cats={cats} count={filtered.length} onCity={setCity} onCats={setCats} />
@@ -86,7 +88,7 @@ export default function PlacesPage() {
       map={
         <>
           <MapView places={mapPlaces} focus={selected} fitKey={`${status}|${city}|${cats.join(',')}`} onSelect={setSelectedId} />
-          {selected && <PlaceDetailCard place={selected} onClose={() => setSelectedId(null)} />}
+          {selected && <PlaceDetailCard place={selected} canEdit={isAdmin} onClose={() => setSelectedId(null)} />}
         </>
       }
     />

@@ -115,6 +115,7 @@ export default function MapView({
         gestureHandling="greedy"
         disableDefaultUI
         zoomControl
+        controlSize={window.innerWidth < 640 ? 44 : undefined} // mobile: ปุ่มกดอย่างน้อย 44px
         zoomControlOptions={{ position: ControlPosition.TOP_RIGHT }}
         onClick={(e) => e.detail.latLng && onPick?.(e.detail.latLng.lat, e.detail.latLng.lng)}
         className="h-full w-full"

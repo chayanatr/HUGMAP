@@ -8,7 +8,7 @@ import { fmtDuration } from '@/lib/geo';
 import type { Place } from '@/lib/types';
 
 /** การ์ดลอยเขียวเข้มมุมขวาล่างของแผนที่ (mobile เต็มกว้าง) */
-export function PlaceDetailCard({ place, onClose, tripAction }: { place: Place; onClose: () => void; tripAction?: ReactNode }) {
+export function PlaceDetailCard({ place, onClose, canEdit, tripAction }: { place: Place; onClose: () => void; canEdit?: boolean; tripAction?: ReactNode }) {
   const c = CAT[place.category];
   const info = [
     place.open_hours ? `เปิด ${place.open_hours}` : 'ไม่ระบุเวลาเปิด',
@@ -45,9 +45,11 @@ export function PlaceDetailCard({ place, onClose, tripAction }: { place: Place; 
       <div className="rounded-input bg-dark-field px-3 py-2 text-[12px] leading-[1.6]">{info}</div>
       {place.description && <p className="line-clamp-3 text-[13px] leading-[1.6] text-dark-soft">{place.description}</p>}
       <div className="flex gap-2">
-        <Button variant="dark-outline" icon="edit" href={`/places/${place.id}/edit`}>
-          แก้ไข
-        </Button>
+        {canEdit && (
+          <Button variant="dark-outline" icon="edit" href={`/places/${place.id}/edit`}>
+            แก้ไข
+          </Button>
+        )}
         {tripAction}
       </div>
     </DarkCard>

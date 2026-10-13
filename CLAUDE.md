@@ -30,7 +30,6 @@ HUGMAP คือเว็บแอปสำหรับพนักงานบ�
 |---|---|---|
 | `NEXT_PUBLIC_SUPABASE_URL` | client + server | |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | client + server | |
-| `SUPABASE_SERVICE_ROLE_KEY` | server เท่านั้น (route `/share/[token]`) | ห้ามขึ้นต้นด้วย `NEXT_PUBLIC_`; ไม่ตั้ง = ใช้ anon key แทน (dev ใช้ได้ผ่าน dev-policies; production หน้าลิงก์ลูกค้าจะขึ้นไม่พบเพราะ RLS) |
 | `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` | client | จำกัดด้วย HTTP referrer (localhost + โดเมน Vercel) และเปิดเฉพาะ API ที่ใช้; ไม่มี key = หน้าแผนที่แสดงข้อความแจ้ง |
 | `NEXT_PUBLIC_GOOGLE_MAP_ID` | client | Map ID (Vector, JavaScript) ที่จำเป็นสำหรับ AdvancedMarker; ใช้สไตล์มาตรฐานของ Google ตามที่เจ้าของโปรเจกต์เลือก (ไม่ใช้โทนเทาตามดีไซน์เดิม); ว่าง = `DEMO_MAP_ID` ใช้ตอนพัฒนาเท่านั้น |
 
@@ -43,8 +42,10 @@ HUGMAP คือเว็บแอปสำหรับพนักงานบ�
 - ปุ่มบน mobile ต้องสูงอย่างน้อย 44px · ข้อความต้องมีคอนทราสต์อย่างน้อย 4.5:1
 - logic ระยะทาง ตารางเวลา จัดลำดับ และหาสถานที่ใกล้เส้นทาง ใช้ `lib/geo.ts` (port มาจากต้นแบบแล้ว) อย่าเขียนใหม่
 - งานฐานข้อมูลทุกครั้งต้องทำเป็น migration ใน `supabase/migrations/` (ใช้ Supabase CLI) ห้ามแก้ผ่าน dashboard อย่างเดียว
-- RLS เปิดทุกตาราง: role `admin` (ใน `app_metadata.role`) จัดการ places ได้, `staff` จัดเส้นทางได้
-- `supabase/dev-policies.sql` ใช้เฉพาะ local/dev ห้าม apply บน production
+- RLS เปิดทุกตาราง: role `admin` (ใน `app_metadata.role`) จัดการ places ได้, `staff` อ่าน places และจัดเส้นทางได้; ผู้ใช้ที่ไม่มี role เข้าไม่ได้ — ตั้ง role ผ่าน dashboard/SQL เท่านั้น (ผู้ใช้แก้เองไม่ได้)
+- ไม่มีสมัครสมาชิกเอง: ผู้ดูแลสร้างผู้ใช้ใน Supabase Auth แล้วตั้ง `app_metadata.role`; ปิด "Allow new users to sign up" ใน Auth settings
+- ลิงก์ลูกค้า `/share/[token]` อ่านผ่านฟังก์ชัน `shared_trip(token)` (security definer, คืนเฉพาะทริปที่ตรง token) ด้วย anon key — **ไม่ใช้ service role key** (เปลี่ยนจากแผนเดิมโดยตั้งใจ ไม่ต้องเก็บกุญแจที่ข้าม RLS บนเซิร์ฟเวอร์)
+- ไม่มี dev-policies แล้ว: dev ก็ต้องล็อกอินด้วยผู้ใช้ที่มี role เหมือน production
 - ข้อความ error/toast ใช้ภาษาไทยตาม README
 
 ## คำสั่ง
