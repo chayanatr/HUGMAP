@@ -23,18 +23,14 @@ const TRIP_COLUMNS = 'id,code,name,client_name,pax,start_date,day_start_min,shar
 const makeCode = () => `TR-${new Date().getFullYear() + 543}-${Math.floor(100 + Math.random() * 900)}`;
 const todayIso = () => new Date().toISOString().slice(0, 10);
 
-/** โหลดซ้อนกัน (เช่น React StrictMode) ต้องไม่สร้างทริปเริ่มต้นซ้ำ — ใช้ Promise เดียวร่วมกัน */
-let creatingDefault: Promise<Trip> | null = null;
-const createDefaultTrip = () => (creatingDefault ??= createTrip().finally(() => (creatingDefault = null)));
-
-/** id = 'current' → ทริปล่าสุด (ถ้ายังไม่มีเลย สร้างทริปเริ่มต้นให้) */
+/** id = 'current' → ทริปล่าสุด (ถ้ายังไม่มีเลยคืน null — ไม่สร้างทริปว่างให้เอง ผู้ใช้สร้างที่หน้า /trips) */
 export async function fetchTrip(idOrCurrent: string): Promise<TripData | null> {
   const db = supabase();
   let trip: Trip | null;
   if (idOrCurrent === 'current') {
     const { data, error } = await db.from('trips').select(TRIP_COLUMNS).order('created_at', { ascending: false }).limit(1).maybeSingle();
     if (error) throw error;
-    trip = (data as Trip | null) ?? (await createDefaultTrip());
+    trip = data as Trip | null;
   } else {
     const { data, error } = await db.from('trips').select(TRIP_COLUMNS).eq('id', idOrCurrent).maybeSingle();
     if (error) throw error;
@@ -51,6 +47,24 @@ export async function fetchLatestTrip(): Promise<TripData | null> {
   if (error) throw error;
   if (!data) return null;
   return { trip: data as Trip, days: await loadDays(db, (data as Trip).id) };
+}
+
+export interface TripListItem {
+  trip: Trip;
+  dayCount: number;
+}
+
+/** ทริปทั้งหมด ใหม่สุดก่อน พร้อมจำนวนวัน */
+export async function fetchTrips(): Promise<TripListItem[]> {
+  const { data, error } = await supabase()
+    .from('trips')
+    .select(`${TRIP_COLUMNS},trip_days(count)`)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return ((data ?? []) as unknown as (Trip & { trip_days: { count: number }[] })[]).map(({ trip_days, ...trip }) => ({
+    trip: trip as Trip,
+    dayCount: trip_days?.[0]?.count ?? 0,
+  }));
 }
 
 /** วัน + จุดแวะ + เส้นทางที่ cache ไว้ */
