@@ -12,6 +12,7 @@ import {
   ensureShareToken,
   fetchTrip,
   reorderDay,
+  revokeShareToken,
   saveDayRoute,
   updateTrip as updateTripRow,
   type DayData,
@@ -258,6 +259,17 @@ export function useTripPlanner(tripId: string, places: Place[], notify: (message
     }
   }, [trip, days, placeMap, googleReady, notify]);
 
+  const revokeShareLink = useCallback(async () => {
+    if (!trip?.share_token) return;
+    try {
+      await revokeShareToken(trip.id);
+      setTrip({ ...trip, share_token: null });
+      notify('ยกเลิกลิงก์ลูกค้าแล้ว ลิงก์เดิมเปิดไม่ได้อีก');
+    } catch {
+      notify('ยกเลิกลิงก์ไม่สำเร็จ กรุณาลองอีกครั้ง');
+    }
+  }, [trip, notify]);
+
   return {
     status,
     reload: load,
@@ -275,6 +287,6 @@ export function useTripPlanner(tripId: string, places: Place[], notify: (message
     radiusKm,
     setRadiusKm,
     hits,
-    actions: { addPlace, removeStop, moveStop, autoOrder: runAutoOrder, addDay: addNewDay, deleteDay: removeDay, updateTrip, shareLink },
+    actions: { addPlace, removeStop, moveStop, autoOrder: runAutoOrder, addDay: addNewDay, deleteDay: removeDay, updateTrip, shareLink, revokeShareLink },
   };
 }

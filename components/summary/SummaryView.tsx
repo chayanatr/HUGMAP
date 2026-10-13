@@ -23,12 +23,15 @@ export function SummaryView({
   mode,
   routing,
   onCopyLink,
+  onRevokeLink,
   onAddNearby,
 }: {
   data: SummaryData;
   mode: 'staff' | 'client';
   routing?: boolean;
   onCopyLink?: () => void;
+  /** แสดงปุ่ม "ยกเลิกลิงก์" เมื่อทริปมีลิงก์ลูกค้าเปิดอยู่ (staff เท่านั้น) */
+  onRevokeLink?: () => void;
   onAddNearby?: (dayId: string, hit: NearbyHit, atIndex: number) => void;
 }) {
   const s = useMemo(() => summarize(data), [data]);
@@ -59,6 +62,11 @@ export function SummaryView({
                 <Button variant="outline" icon="link" onClick={onCopyLink} className="md:!h-10 !text-[13px]">
                   คัดลอกลิงก์ลูกค้า
                 </Button>
+                {trip.share_token && onRevokeLink && (
+                  <Button variant="outline" icon="link_off" onClick={onRevokeLink} className="md:!h-10 !text-[13px] !text-danger-text">
+                    ยกเลิกลิงก์
+                  </Button>
+                )}
               </>
             )}
             <Button icon="picture_as_pdf" onClick={() => window.print()} className="md:!h-10 !px-3.5 !text-[13px]">
