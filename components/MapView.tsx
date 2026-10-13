@@ -9,8 +9,8 @@ import type { CategoryKey } from '@/lib/types';
 import { Icon } from '@/components/ui/Icon';
 
 const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-// Map ID ที่ผูกสไตล์แผนที่โทนเทา (สร้างใน Google Cloud Console → Map Management → Map Styles)
-// DEMO_MAP_ID ใช้ได้ตอนพัฒนา แต่เป็นสไตล์มาตรฐานของ Google (ไม่ใช่โทนเทา)
+// Map ID (Vector) จาก Google Cloud Console → Map Management — จำเป็นสำหรับ AdvancedMarker
+// ใช้สไตล์มาตรฐานของ Google ตามที่เจ้าของโปรเจกต์เลือก; DEMO_MAP_ID สำหรับพัฒนาเท่านั้น
 const MAP_ID = process.env.NEXT_PUBLIC_GOOGLE_MAP_ID || 'DEMO_MAP_ID';
 const LAOS_CENTER = { lat: 19.89, lng: 102.14 };
 const ROUTE_COLOR = '#2F8466'; // = brand ใน tailwind.config.ts (Polyline รับได้เฉพาะสตริงสี)
