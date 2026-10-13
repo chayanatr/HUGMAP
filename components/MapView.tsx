@@ -1,7 +1,7 @@
 'use client';
 // แผนที่ Google Maps (Maps JavaScript API ผ่าน @vis.gl/react-google-maps)
 // ใช้ผ่าน: const MapView = dynamic(() => import('@/components/MapView'), { ssr: false });
-import { AdvancedMarker, AdvancedMarkerAnchorPoint, APIProvider, ControlPosition, Map, Pin, useMap } from '@vis.gl/react-google-maps';
+import { AdvancedMarker, AdvancedMarkerAnchorPoint, ControlPosition, Map, Pin, useMap } from '@vis.gl/react-google-maps';
 import { useEffect, useMemo, type CSSProperties, type ReactNode } from 'react';
 import { CAT } from '@/lib/categories';
 import { cn } from '@/lib/cn';
@@ -24,17 +24,30 @@ function Fit({ points, fitKey }: { points: [number, number][]; fitKey: string })
   const map = useMap();
   useEffect(() => {
     if (!map) return;
-    if (points.length === 1) {
-      map.setCenter({ lat: points[0][0], lng: points[0][1] });
-      map.setZoom(16);
-    } else if (points.length > 1) {
-      const bounds = new google.maps.LatLngBounds();
-      points.forEach(([lat, lng]) => bounds.extend({ lat, lng }));
-      map.fitBounds(bounds, 48);
-      google.maps.event.addListenerOnce(map, 'idle', () => {
-        if ((map.getZoom() ?? 0) > 17) map.setZoom(17);
-      });
-    }
+    const fit = () => {
+      if (points.length === 1) {
+        map.setCenter({ lat: points[0][0], lng: points[0][1] });
+        map.setZoom(16);
+      } else if (points.length > 1) {
+        const bounds = new google.maps.LatLngBounds();
+        points.forEach(([lat, lng]) => bounds.extend({ lat, lng }));
+        map.fitBounds(bounds, 48);
+        google.maps.event.addListenerOnce(map, 'idle', () => {
+          if ((map.getZoom() ?? 0) > 17) map.setZoom(17);
+        });
+      }
+    };
+    // กรอบแผนที่ที่ยังไม่มีขนาด (แท็บถูกซ่อน/เลย์เอาต์ยังไม่เสร็จ) fit แล้วจะซูมออกกว้างเกิน → รอจนมีขนาดก่อน
+    const div = map.getDiv();
+    if (div.offsetWidth > 0 && div.offsetHeight > 0) return fit();
+    const ro = new ResizeObserver(() => {
+      if (div.offsetWidth > 0 && div.offsetHeight > 0) {
+        ro.disconnect();
+        fit();
+      }
+    });
+    ro.observe(div);
+    return () => ro.disconnect();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [map, fitKey]);
   return null;
@@ -91,8 +104,9 @@ export default function MapView({
     );
   }
 
+  // ต้องอยู่ใต้ <MapProvider> (app/places/layout.tsx, app/trips/layout.tsx)
   return (
-    <APIProvider apiKey={API_KEY} language="th" region="LA">
+    <>
       <Map
         mapId={MAP_ID}
         colorScheme={theme === 'dark' ? 'DARK' : 'LIGHT'}
@@ -172,6 +186,6 @@ export default function MapView({
           </AdvancedMarker>
         )}
       </Map>
-    </APIProvider>
+    </>
   );
 }

@@ -22,7 +22,7 @@ HUGMAP คือเว็บแอปสำหรับพนักงานบ�
 - **Host**: Vercel — Preview deployment ต่อ PR, Production จาก `main`
 - **Database / Auth / Storage**: Supabase (Postgres + PostGIS, Supabase Auth, Storage bucket `place-photos`)
 - **Map**: Google Maps JavaScript API ผ่าน `@vis.gl/react-google-maps` (เปลี่ยนจาก Leaflet ตามคำสั่งเจ้าของโปรเจกต์; โหลดแบบ `dynamic(..., { ssr: false })`; ห้ามใช้ tile ของ Google นอก Maps API)
-- **Routing**: Google Routes (`google.maps.routes` ใน Maps JS API) — ยังไม่ได้ย้ายจาก OSRM ใน `lib/geo.ts` (ทำในเฟส 3)
+- **Routing**: Google Routes (`google.maps.routes.Route.computeRoutes` ใน Maps JS API) ผ่าน `lib/routes.ts`; ต้องเปิดใช้ "Routes API" ในโปรเจกต์ Google Cloud; ผลถูก cache ลง `trip_days.route_geom` / `trip_stops.leg_km,leg_min`
 - **Drag & drop**: @dnd-kit/sortable
 
 ## Environment variables
@@ -33,7 +33,6 @@ HUGMAP คือเว็บแอปสำหรับพนักงานบ�
 | `SUPABASE_SERVICE_ROLE_KEY` | server เท่านั้น (route `/share/[token]`) | ห้ามขึ้นต้นด้วย `NEXT_PUBLIC_` |
 | `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` | client | จำกัดด้วย HTTP referrer (localhost + โดเมน Vercel) และเปิดเฉพาะ API ที่ใช้; ไม่มี key = หน้าแผนที่แสดงข้อความแจ้ง |
 | `NEXT_PUBLIC_GOOGLE_MAP_ID` | client | Map ID (Vector, JavaScript) ที่จำเป็นสำหรับ AdvancedMarker; ใช้สไตล์มาตรฐานของ Google ตามที่เจ้าของโปรเจกต์เลือก (ไม่ใช้โทนเทาตามดีไซน์เดิม); ว่าง = `DEMO_MAP_ID` ใช้ตอนพัฒนาเท่านั้น |
-| `NEXT_PUBLIC_OSRM_URL` | client | ใช้ชั่วคราวจนกว่าเฟส 3 ย้ายไป Google Routes แล้วลบออก |
 
 ตั้งค่าทั้งใน `.env.local` และ Vercel → Project Settings → Environment Variables (Preview + Production)
 

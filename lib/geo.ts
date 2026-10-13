@@ -19,7 +19,7 @@ export function pointToSegmentKm(p: LL, a: LL, b: LL) {
   return Math.sqrt(x * x + y * y) * 111.32;
 }
 
-/** ค่าประมาณเมื่อยังไม่มีผล OSRM */
+/** ค่าประมาณเมื่อยังไม่มีผลจาก Google Routes (lib/routes.ts) */
 export function estimateLeg(a: LL, b: LL): Leg {
   const km = haversineKm(a, b) * 1.35;
   const walk = km < 0.7;
@@ -88,20 +88,6 @@ export function autoOrder(places: Place[]): Place[] {
       }
   }
   return [...route, ...evening];
-}
-
-export async function fetchOsrmRoute(points: LL[]) {
-  const base = process.env.NEXT_PUBLIC_OSRM_URL || 'https://router.project-osrm.org';
-  const q = points.map((p) => `${p.lng},${p.lat}`).join(';');
-  const r = await fetch(`${base}/route/v1/driving/${q}?overview=full&geometries=geojson`);
-  if (!r.ok) throw new Error('OSRM ' + r.status);
-  const j = await r.json();
-  const route = j.routes[0];
-  return {
-    line: route.geometry.coordinates.map(([lng, lat]: [number, number]) => [lat, lng] as [number, number]),
-    legs: route.legs.map((l: { distance: number; duration: number }) => ({ km: l.distance / 1000, min: Math.round(l.duration / 60), walk: false })) as Leg[],
-    geojson: route.geometry,
-  };
 }
 
 export const fmtKm = (km: number) => (km < 1 ? Math.round(km * 100) * 10 + ' ม.' : (km < 10 ? km.toFixed(1) : Math.round(km)) + ' กม.');

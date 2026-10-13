@@ -24,7 +24,6 @@ export interface Trip {
   start_date: string;          // ISO date
   day_start_min: number;       // 540 = 09:00
   share_token: string | null;
-  days: string[][];            // place ids per day, in order (assembled from trip_stops)
 }
 
 export interface ScheduledStop {
