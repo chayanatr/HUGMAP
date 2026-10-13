@@ -1,10 +1,29 @@
 // แผนที่สถานที่ /places
-// สร้าง UI ตาม design_handoff_champa_route/README.md และ design/Champa Route.dc.html
+// เฟส 1: โครงหน้า (shell) เท่านั้น — เฟส 2 เติมข้อมูลจาก Supabase, ตัวกรอง, การ์ดสถานที่
 import dynamic from 'next/dynamic';
+import { PageShell, PanelBody, PanelHeader } from '@/components/shell/PageShell';
+import { SearchField } from '@/components/shell/SearchField';
+import { IconButton } from '@/components/ui/IconButton';
+import { Card } from '@/components/ui/Card';
+
 const MapView = dynamic(() => import('@/components/MapView'), { ssr: false });
 
 export default function PlacesPage() {
-  // TODO: โหลด places จาก Supabase, filters {city, cats, q}, selectedId
-  // Layout: grid lg:grid-cols-[420px_1fr] md:grid-cols-[340px_1fr] h-full; mobile: แผนที่ 320px ด้านบน
-  return <div className="grid h-full md:grid-cols-[340px_1fr] lg:grid-cols-[420px_1fr]"><aside className="bg-surface border-r border-line" /><div className="relative h-80 md:h-full"><MapView /></div></div>;
+  return (
+    <PageShell
+      tallMap
+      panel={
+        <>
+          <PanelHeader>
+            <SearchField label="ค้นหาชื่อสถานที่" placeholder="ค้นหาชื่อสถานที่" />
+            <IconButton variant="primary" icon="add_location_alt" label="เพิ่มสถานที่" href="/places/new" />
+          </PanelHeader>
+          <PanelBody>
+            <Card className="p-4 text-[14px] leading-[1.6] text-muted">รายการสถานที่จะแสดงที่นี่ (เฟส 2)</Card>
+          </PanelBody>
+        </>
+      }
+      map={<MapView />}
+    />
+  );
 }
