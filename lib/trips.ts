@@ -137,6 +137,11 @@ export async function saveDayRoute(dayId: string, placeIds: string[], route: Rou
   return data as boolean;
 }
 
+/** ยกเลิกลิงก์ลูกค้า: ลบ share_token — ลิงก์เดิมเปิดไม่ได้ทันที และการแชร์ครั้งถัดไปจะได้ token ใหม่ที่ต่างจากเดิม */
+export async function revokeShareToken(tripId: string) {
+  await updateTrip(tripId, { share_token: null });
+}
+
 /** สร้าง share_token ถ้ายังไม่มี แล้วคืนค่า */
 export async function ensureShareToken(trip: Trip): Promise<string> {
   if (trip.share_token) return trip.share_token;

@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ensureDayRoute, roadHitsFor } from './dayRoutes';
 import { buildSummaryData, type RoadHits } from './summary';
-import { ensureShareToken, fetchTrip, reorderDay, type DayData } from './trips';
+import { ensureShareToken, fetchTrip, reorderDay, revokeShareToken, type DayData } from './trips';
 import type { Place, Trip } from './types';
 import { useGoogleReady } from './useGoogleReady';
 
@@ -115,5 +115,16 @@ export function useTripSummary(tripId: string, places: Place[], placesReady: boo
     }
   }, [trip, notify]);
 
-  return { status, reload: load, trip, data, routing, actions: { addToDay, copyShareLink } };
+  const revokeShareLink = useCallback(async () => {
+    if (!trip?.share_token) return;
+    try {
+      await revokeShareToken(trip.id);
+      setTrip({ ...trip, share_token: null });
+      notify('ยกเลิกลิงก์ลูกค้าแล้ว ลิงก์เดิมเปิดไม่ได้อีก');
+    } catch {
+      notify('ยกเลิกลิงก์ไม่สำเร็จ กรุณาลองอีกครั้ง');
+    }
+  }, [trip, notify]);
+
+  return { status, reload: load, trip, data, routing, actions: { addToDay, copyShareLink, revokeShareLink } };
 }

@@ -15,12 +15,15 @@ export function TripSettingsDialog({
   onClose,
   onSave,
   onNewTrip,
+  onRevokeLink,
 }: {
   trip: Trip;
   open: boolean;
   onClose: () => void;
   onSave: (patch: Patch) => void;
   onNewTrip: () => void;
+  /** ยกเลิกลิงก์ลูกค้า (ผู้เรียกถามยืนยันเอง) */
+  onRevokeLink: () => void;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const [form, setForm] = useState({ name: trip.name, client: trip.client_name, pax: String(trip.pax), date: trip.start_date, time: fmtClock(trip.day_start_min) });
@@ -68,6 +71,17 @@ export function TripSettingsDialog({
           <Input label="เวลาเริ่มของแต่ละวัน" type="time" value={form.time} onChange={(e) => set('time', e.target.value)} />
         </div>
         <Input label="วันที่เริ่มเดินทาง" type="date" value={form.date} onChange={(e) => set('date', e.target.value)} error={showErrors ? errors.date : ''} />
+        <div className="flex items-center justify-between gap-3 rounded-item bg-panel px-3.5 py-2.5">
+          <div className="min-w-0">
+            <div className="text-label">ลิงก์ลูกค้า</div>
+            <div className="text-value">{trip.share_token ? 'เปิดใช้งานอยู่' : 'ยังไม่ได้แชร์'}</div>
+          </div>
+          {trip.share_token && (
+            <Button variant="outline" icon="link_off" onClick={onRevokeLink} className="shrink-0 !text-danger-text">
+              ยกเลิกลิงก์
+            </Button>
+          )}
+        </div>
         <div className="flex items-center gap-2 pt-1">
           <Button variant="soft" onClick={onNewTrip}>
             สร้างทริปใหม่

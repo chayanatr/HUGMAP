@@ -21,7 +21,18 @@ export default function TripSummaryPage({ params }: { params: { id: string } }) 
   }, []);
 
   if (data) {
-    return <SummaryView data={data} mode="staff" routing={routing} onCopyLink={actions.copyShareLink} onAddNearby={(dayId, hit, at) => actions.addToDay(dayId, hit.place, at)} />;
+    return (
+      <SummaryView
+        data={data}
+        mode="staff"
+        routing={routing}
+        onCopyLink={actions.copyShareLink}
+        onRevokeLink={() => {
+          if (window.confirm('ยกเลิกลิงก์ลูกค้าของทริปนี้?\nลูกค้าที่มีลิงก์เดิมจะเปิดดูไม่ได้อีก (กด "คัดลอกลิงก์ลูกค้า" เพื่อสร้างลิงก์ใหม่ได้ภายหลัง)')) actions.revokeShareLink();
+        }}
+        onAddNearby={(dayId, hit, at) => actions.addToDay(dayId, hit.place, at)}
+      />
+    );
   }
 
   const failed = status === 'error' || status === 'missing' || placesStatus === 'error';

@@ -117,7 +117,18 @@ export default function TripPlannerPage({ params }: { params: { id: string } }) 
               </>
             )}
           </PanelBody>
-          {trip && <TripSettingsDialog trip={trip} open={editing} onClose={() => setEditing(false)} onSave={actions.updateTrip} onNewTrip={newTrip} />}
+          {trip && (
+            <TripSettingsDialog
+              trip={trip}
+              open={editing}
+              onClose={() => setEditing(false)}
+              onSave={actions.updateTrip}
+              onNewTrip={newTrip}
+              onRevokeLink={() => {
+                if (window.confirm('ยกเลิกลิงก์ลูกค้าของทริปนี้?\nลูกค้าที่มีลิงก์เดิมจะเปิดดูไม่ได้อีก (กดปุ่มแชร์ลิงก์เพื่อสร้างลิงก์ใหม่ได้ภายหลัง)')) actions.revokeShareLink();
+              }}
+            />
+          )}
         </>
       }
       map={
