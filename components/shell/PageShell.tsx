@@ -42,5 +42,6 @@ export function PanelHeader({ children }: { children: ReactNode }) {
 
 /** เนื้อหา panel: padding 16, gap 14, scroll ภายในบน tablet/desktop */
 export function PanelBody({ children, className }: { children: ReactNode; className?: string }) {
-  return <div className={cn('flex flex-col gap-3.5 p-4 md:min-h-0 md:flex-1 md:overflow-y-auto', className)}>{children}</div>;
+  // [&>*]:shrink-0 — ลูกใน flex-col ที่เลื่อนได้ต้องไม่หดตามความสูง (การ์ดที่มี overflow-hidden จะถูกบีบจนเหลือแถบบาง)
+  return <div className={cn('flex flex-col gap-3.5 p-4 md:min-h-0 md:flex-1 md:overflow-y-auto [&>*]:shrink-0', className)}>{children}</div>;
 }
