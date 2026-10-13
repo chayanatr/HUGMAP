@@ -2,7 +2,8 @@ import { supabase } from './supabase';
 import type { CategoryKey, CityKey, Place } from './types';
 
 const BUCKET = 'place-photos';
-const COLUMNS = 'id,name,category,city,lat,lng,open_hours,fee,duration_min,description,photos';
+export const PLACE_COLUMNS = 'id,name,category,city,lat,lng,open_hours,fee,duration_min,description,photos';
+const COLUMNS = PLACE_COLUMNS;
 
 export const PHOTO_MAX_BYTES = 5 * 1024 * 1024;
 export const PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp'];

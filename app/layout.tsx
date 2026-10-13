@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { Anuphan } from 'next/font/google';
 import './globals.css';
-import { AppNav } from '@/components/AppNav';
+import { AppFrame } from '@/components/AppFrame';
 import { ToastProvider } from '@/components/ui/Toast';
 
 const anuphan = Anuphan({ subsets: ['thai', 'latin'], weight: ['300', '400', '500', '600', '700'], variable: '--font-anuphan' });
@@ -17,10 +17,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="bg-bg text-ink font-sans antialiased">
         <ToastProvider>
-          <div className="flex h-dvh print:h-auto">
-            <AppNav />
-            <main className="relative min-h-0 min-w-0 flex-1 overflow-auto pb-[68px] md:pb-0 print:overflow-visible">{children}</main>
-          </div>
+          <AppFrame>{children}</AppFrame>
         </ToastProvider>
       </body>
     </html>

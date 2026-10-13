@@ -30,7 +30,7 @@ HUGMAP คือเว็บแอปสำหรับพนักงานบ�
 |---|---|---|
 | `NEXT_PUBLIC_SUPABASE_URL` | client + server | |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | client + server | |
-| `SUPABASE_SERVICE_ROLE_KEY` | server เท่านั้น (route `/share/[token]`) | ห้ามขึ้นต้นด้วย `NEXT_PUBLIC_` |
+| `SUPABASE_SERVICE_ROLE_KEY` | server เท่านั้น (route `/share/[token]`) | ห้ามขึ้นต้นด้วย `NEXT_PUBLIC_`; ไม่ตั้ง = ใช้ anon key แทน (dev ใช้ได้ผ่าน dev-policies; production หน้าลิงก์ลูกค้าจะขึ้นไม่พบเพราะ RLS) |
 | `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` | client | จำกัดด้วย HTTP referrer (localhost + โดเมน Vercel) และเปิดเฉพาะ API ที่ใช้; ไม่มี key = หน้าแผนที่แสดงข้อความแจ้ง |
 | `NEXT_PUBLIC_GOOGLE_MAP_ID` | client | Map ID (Vector, JavaScript) ที่จำเป็นสำหรับ AdvancedMarker; ใช้สไตล์มาตรฐานของ Google ตามที่เจ้าของโปรเจกต์เลือก (ไม่ใช้โทนเทาตามดีไซน์เดิม); ว่าง = `DEMO_MAP_ID` ใช้ตอนพัฒนาเท่านั้น |
 

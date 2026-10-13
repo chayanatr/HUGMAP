@@ -63,7 +63,18 @@ export function nearbyAlongRoute(route: Place[], candidates: Place[], radiusKm: 
     .sort((a, b) => a.distanceKm - b.distanceKm);
 }
 
-const isEvening = (p: Place) => (parseOpenHours(p.open_hours)?.open ?? 0) >= 15 * 60;
+/** ช่วง (index ของจุดเริ่มช่วง) ที่ใกล้สถานที่ p ที่สุด — ใช้ป้าย "ช่วงจุด 2–3" และตำแหน่งแทรก */
+export function nearestSegment(p: LL, route: LL[]) {
+  if (route.length < 2) return 0;
+  let best = Infinity, seg = 0;
+  for (let i = 0; i < route.length - 1; i++) {
+    const d = pointToSegmentKm(p, route[i], route[i + 1]);
+    if (d < best) { best = d; seg = i; }
+  }
+  return seg;
+}
+
+const isEvening =(p: Place) => (parseOpenHours(p.open_hours)?.open ?? 0) >= 15 * 60;
 
 /** ตรึงจุดแรก → nearest neighbour → 2-opt; สถานที่เปิดช่วงเย็นไปไว้ท้าย */
 export function autoOrder(places: Place[]): Place[] {
