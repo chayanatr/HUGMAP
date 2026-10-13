@@ -9,8 +9,11 @@ import { PlaceDetailCard } from '@/components/places/PlaceDetailCard';
 import { PlaceFilters } from '@/components/places/PlaceFilters';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { Icon } from '@/components/ui/Icon';
 import { IconButton } from '@/components/ui/IconButton';
+import { useToast } from '@/components/ui/Toast';
 import { useAuth } from '@/lib/auth';
+import { useCurrentTrip } from '@/lib/useCurrentTrip';
 import { usePlaces } from '@/lib/usePlaces';
 import type { CategoryKey } from '@/lib/types';
 
@@ -19,6 +22,8 @@ const MapView = dynamic(() => import('@/components/MapView'), { ssr: false });
 export default function PlacesPage() {
   const { places, status, reload } = usePlaces();
   const isAdmin = useAuth().role === 'admin';
+  const toast = useToast();
+  const trip = useCurrentTrip(toast);
   const [q, setQ] = useState('');
   const [city, setCity] = useState('');
   const [cats, setCats] = useState<CategoryKey[]>([]);
@@ -80,7 +85,7 @@ export default function PlacesPage() {
               </Card>
             )}
             {filtered.map((p) => (
-              <PlaceCard key={p.id} place={p} selected={p.id === selectedId} onSelect={selectFromList} />
+              <PlaceCard key={p.id} place={p} selected={p.id === selectedId} inTrip={trip.inTripIds.has(p.id)} onSelect={selectFromList} />
             ))}
           </PanelBody>
         </>
@@ -88,7 +93,26 @@ export default function PlacesPage() {
       map={
         <>
           <MapView places={mapPlaces} focus={selected} fitKey={`${status}|${city}|${cats.join(',')}`} onSelect={setSelectedId} />
-          {selected && <PlaceDetailCard place={selected} canEdit={isAdmin} onClose={() => setSelectedId(null)} />}
+          {selected && (
+            <PlaceDetailCard
+              place={selected}
+              canEdit={isAdmin}
+              onClose={() => setSelectedId(null)}
+              tripAction={
+                trip.loaded &&
+                (trip.inCurrentDay(selected.id) ? (
+                  <div role="status" className="flex h-11 flex-1 items-center justify-center gap-1.5 rounded-input bg-dark-field text-[14px] font-semibold text-dark-soft">
+                    <Icon name="check" className="text-[18px] text-brand-mint" />
+                    อยู่ในวันที่ {trip.dayNo} แล้ว
+                  </div>
+                ) : (
+                  <Button variant="light" className="flex-1" disabled={trip.busy} onClick={() => trip.addToCurrentDay(selected)}>
+                    + เพิ่มในวันที่ {trip.dayNo}
+                  </Button>
+                ))
+              }
+            />
+          )}
         </>
       }
     />

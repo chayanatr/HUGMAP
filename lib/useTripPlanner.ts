@@ -4,6 +4,7 @@ import { autoOrder, haversineKm, nearbyAlongRoute, nearestSegment, schedule } fr
 import { ensureDayRoute } from './dayRoutes';
 import { fetchRoute } from './routes';
 import { placesNearRoute } from './supabase';
+import { getSavedDay, saveDay } from './currentDay';
 import { useGoogleReady } from './useGoogleReady';
 import {
   addDay as addDayRow,
@@ -47,7 +48,9 @@ export function useTripPlanner(tripId: string, places: Place[], notify: (message
       if (!data) return setStatus('missing');
       setTrip(data.trip);
       setDays(data.days);
-      setDayIdx(0);
+      // กลับมาที่วันที่เลือกไว้ล่าสุด (ร่วมกับ "+ เพิ่มในวันที่ N" ที่หน้าสถานที่)
+      const saved = getSavedDay(data.trip.id);
+      setDayIdx(Math.max(0, data.days.findIndex((d) => d.dayNo === saved)));
       setStatus('ready');
     } catch {
       setStatus('error');
@@ -60,6 +63,12 @@ export function useTripPlanner(tripId: string, places: Place[], notify: (message
 
   const placeMap = useMemo(() => new Map(places.map((p) => [p.id, p])), [places]);
   const day = days[dayIdx] as DayData | undefined;
+
+  const tripIdNow = trip?.id;
+  const dayNoNow = day?.dayNo;
+  useEffect(() => {
+    if (tripIdNow && dayNoNow) saveDay(tripIdNow, dayNoNow);
+  }, [tripIdNow, dayNoNow]);
   const dayKey = day ? day.placeIds.join(',') : '';
   const dayPlaces = useMemo(() => (day ? (day.placeIds.map((id) => placeMap.get(id)).filter(Boolean) as Place[]) : []), [day, placeMap]);
   const placesReady = !!day && dayPlaces.length === day.placeIds.length;
