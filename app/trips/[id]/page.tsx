@@ -27,10 +27,12 @@ export default function TripPlannerPage({ params }: { params: { id: string } }) 
   const { status, trip, days, day, dayIdx, dayPlaces, sched, hits, radiusKm, actions } = planner;
   const [editing, setEditing] = useState(false);
 
-  // /trips/current → แสดง id จริงใน URL โดยไม่โหลดหน้าใหม่
+  // /trips/current → แสดง id จริงใน URL โดยไม่โหลดหน้าใหม่; ยังไม่มีทริปเลย → ไปหน้ารายการทริปเพื่อสร้าง
   useEffect(() => {
-    if (params.id === 'current' && trip) window.history.replaceState(null, '', `/trips/${trip.id}`);
-  }, [params.id, trip]);
+    if (params.id !== 'current') return;
+    if (trip) window.history.replaceState(null, '', `/trips/${trip.id}`);
+    else if (status === 'missing') router.replace('/trips');
+  }, [params.id, trip, status, router]);
 
   const stopPts = useMemo(() => dayPlaces.map((p) => ({ id: p.id, lat: p.lat, lng: p.lng, name: p.name, category: p.category })), [dayPlaces]);
   const nearbyPts = useMemo(() => hits.map((h) => ({ id: h.place.id, lat: h.place.lat, lng: h.place.lng, name: h.place.name, category: h.place.category })), [hits]);
@@ -60,6 +62,7 @@ export default function TripPlannerPage({ params }: { params: { id: string } }) 
             <AddPlaceSearch places={places} excludeIds={new Set(day?.placeIds)} onAdd={(p) => actions.addPlace(p)} />
             <IconButton icon="auto_awesome" label="จัดลำดับอัตโนมัติ" onClick={actions.autoOrder} disabled={!day} />
             <IconButton icon="link" label="แชร์ลิงก์ลูกค้า" onClick={actions.shareLink} disabled={!trip} />
+            <IconButton icon="folder_open" label="ทริปทั้งหมด" href="/trips" />
           </PanelHeader>
           <PanelBody>
             {message && (
@@ -73,8 +76,8 @@ export default function TripPlannerPage({ params }: { params: { id: string } }) 
                   </Button>
                 )}
                 {status === 'missing' && (
-                  <Button variant="outline" href="/trips/current">
-                    ไปที่ทริปล่าสุด
+                  <Button variant="outline" href="/trips">
+                    ไปที่ทริปทั้งหมด
                   </Button>
                 )}
               </Card>

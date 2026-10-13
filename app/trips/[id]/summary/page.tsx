@@ -1,5 +1,6 @@
 'use client';
 // สรุปเส้นทาง (พนักงาน) /trips/[id]/summary — id = 'current' คือทริปล่าสุด; ?r=<กม.> กำหนดรัศมีแนะนำใกล้เส้นทาง
+import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { SummaryView } from '@/components/summary/SummaryView';
 import { Button } from '@/components/ui/Button';
@@ -10,6 +11,7 @@ import { useTripSummary } from '@/lib/useTripSummary';
 import { usePlaces } from '@/lib/usePlaces';
 
 export default function TripSummaryPage({ params }: { params: { id: string } }) {
+  const router = useRouter();
   const toast = useToast();
   const [radiusKm, setRadiusKm] = useState(1);
   const { places, status: placesStatus } = usePlaces();
@@ -19,6 +21,11 @@ export default function TripSummaryPage({ params }: { params: { id: string } }) 
     const r = Number(new URLSearchParams(window.location.search).get('r'));
     if (RADIUS_OPTIONS_KM.includes(r)) setRadiusKm(r);
   }, []);
+
+  // /trips/current/summary แต่ยังไม่มีทริปเลย → ไปหน้ารายการทริปเพื่อสร้าง
+  useEffect(() => {
+    if (params.id === 'current' && status === 'missing') router.replace('/trips');
+  }, [params.id, status, router]);
 
   if (data) {
     return (
@@ -48,8 +55,8 @@ export default function TripSummaryPage({ params }: { params: { id: string } }) 
           </Button>
         )}
         {status === 'missing' && (
-          <Button variant="outline" href="/trips/current">
-            ไปที่ทริปล่าสุด
+          <Button variant="outline" href="/trips">
+            ไปที่ทริปทั้งหมด
           </Button>
         )}
       </Card>
