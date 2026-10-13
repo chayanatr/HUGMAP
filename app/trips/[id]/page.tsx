@@ -122,7 +122,7 @@ export default function TripPlannerPage({ params }: { params: { id: string } }) 
       }
       map={
         <>
-          <MapView stops={stopPts} nearby={nearbyPts} routeLine={day?.route?.line} fitKey={fitKey} />
+          <MapView stops={stopPts} nearby={nearbyPts} routeLine={day?.route?.line} fitKey={fitKey} myLocation />
           {day && (
             <>
               <NearbyBar dayNo={day.dayNo} hits={hits} radiusKm={radiusKm} onRadius={planner.setRadiusKm} onAdd={(h) => actions.addPlace(h.place, h.segment + 1)} />
