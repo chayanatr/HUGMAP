@@ -8,7 +8,17 @@ export function fmtThaiDate(iso: string, plusDays = 0) {
   return `${WEEKDAYS[date.getDay()]} ${date.getDate()} ${MONTHS[date.getMonth()]}`;
 }
 
-/** แยก "3.6 กม." เป็นตัวเลขกับหน่วยสำหรับ stat 28px + หน่วย 13px */
+/** ช่วงวันที่ของทริป เช่น "14 พ.ย. – 15 พ.ย. 2569" (ปี พ.ศ.) */
+export function fmtThaiRange(iso: string, dayCount: number) {
+  const [y, m, d] = iso.split('-').map(Number);
+  const fmt = (offset: number, withYear: boolean) => {
+    const date = new Date(y, m - 1, d + offset);
+    return `${date.getDate()} ${MONTHS[date.getMonth()]}${withYear ? ` ${date.getFullYear() + 543}` : ''}`;
+  };
+  return dayCount <= 1 ? fmt(0, true) : `${fmt(0, false)} – ${fmt(dayCount - 1, true)}`;
+}
+
+/** แยก "3.6 กม."เป็นตัวเลขกับหน่วยสำหรับ stat 28px + หน่วย 13px */
 export function splitUnit(text: string): [string, string] {
   const i = text.indexOf(' ');
   return i < 0 ? [text, ''] : [text.slice(0, i), text.slice(i + 1)];

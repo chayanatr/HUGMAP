@@ -36,7 +36,7 @@ export default function TripPlannerPage({ params }: { params: { id: string } }) 
   const nearbyPts = useMemo(() => hits.map((h) => ({ id: h.place.id, lat: h.place.lat, lng: h.place.lng, name: h.place.name, category: h.place.category })), [hits]);
   const placesReady = placesStatus === 'ready';
   const fitKey = `${trip?.id}|${day?.id}|${placesReady}`;
-  const summaryHref = trip ? `/trips/${trip.id}/summary` : '#';
+  const summaryHref = trip ? `/trips/${trip.id}/summary?r=${radiusKm}` : '#';
 
   const newTrip = async () => {
     try {

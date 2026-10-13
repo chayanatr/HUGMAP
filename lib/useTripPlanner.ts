@@ -1,8 +1,10 @@
 'use client';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { autoOrder, haversineKm, nearbyAlongRoute, pointToSegmentKm, schedule } from './geo';
+import { autoOrder, haversineKm, nearbyAlongRoute, nearestSegment, schedule } from './geo';
+import { ensureDayRoute } from './dayRoutes';
 import { fetchRoute } from './routes';
 import { placesNearRoute } from './supabase';
+import { useGoogleReady } from './useGoogleReady';
 import {
   addDay as addDayRow,
   deleteDay as deleteDayRow,
@@ -16,22 +18,6 @@ import {
 import type { NearbyHit, Place, Trip } from './types';
 
 export type TripStatus = 'loading' | 'ready' | 'missing' | 'error';
-
-/** รอ Maps JS API (โหลดโดย <MapProvider>) — ไม่มี API key = ไม่เรียก Google Routes ใช้ค่าประมาณแทน */
-function useGoogleReady() {
-  const [ready, setReady] = useState(false);
-  useEffect(() => {
-    if (!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY) return;
-    const id = setInterval(() => {
-      if (typeof google !== 'undefined' && google.maps) {
-        setReady(true);
-        clearInterval(id);
-      }
-    }, 200);
-    return () => clearInterval(id);
-  }, []);
-  return ready;
-}
 
 const pathKm = (ps: Place[]) => ps.slice(1).reduce((sum, p, i) => sum + haversineKm(ps[i], p), 0);
 
@@ -128,19 +114,10 @@ export function useTripPlanner(tripId: string, places: Place[], notify: (message
 
   const hits: NearbyHit[] = useMemo(() => {
     if (!placesReady || !dayPlaces.length) return [];
-    const segmentOf = (p: Place) => {
-      if (dayPlaces.length < 2) return 0;
-      let best = Infinity, seg = 0;
-      for (let i = 0; i < dayPlaces.length - 1; i++) {
-        const d = pointToSegmentKm(p, dayPlaces[i], dayPlaces[i + 1]);
-        if (d < best) { best = d; seg = i; }
-      }
-      return seg;
-    };
     if (roadHits) {
       return roadHits.flatMap((h) => {
         const place = placeMap.get(h.id);
-        return place ? [{ place, distanceKm: h.distanceKm, segment: segmentOf(place) }] : [];
+        return place ? [{ place, distanceKm: h.distanceKm, segment: nearestSegment(place, dayPlaces) }] : [];
       });
     }
     return nearbyAlongRoute(dayPlaces, places, radiusKm, inTripIds);
@@ -245,6 +222,18 @@ export function useTripPlanner(tripId: string, places: Place[], notify: (message
     if (!trip) return;
     let url: string;
     try {
+      // ลูกค้าเปิดลิงก์โดยไม่มี Google Routes ฝั่งเซิร์ฟเวอร์ → ต้อง cache เส้นทางทุกวันก่อนแชร์ (วันที่คำนวณไม่ได้ใช้ค่าประมาณ)
+      if (googleReady) {
+        await Promise.all(
+          days
+            .filter((d) => !d.route && d.placeIds.length > 1)
+            .map((d) =>
+              ensureDayRoute(d, placeMap)
+                .then((route) => route && setDays((prev) => prev.map((x) => (x.id === d.id && x.placeIds.join(',') === d.placeIds.join(',') ? { ...x, route } : x))))
+                .catch(() => {}),
+            ),
+        );
+      }
       const token = await ensureShareToken(trip);
       if (!trip.share_token) setTrip({ ...trip, share_token: token });
       url = `${window.location.origin}/share/${token}`;
@@ -258,7 +247,7 @@ export function useTripPlanner(tripId: string, places: Place[], notify: (message
       // เบราว์เซอร์บางตัวไม่ให้เขียนคลิปบอร์ด (ไม่มีสิทธิ์/ไม่ใช่ HTTPS) — ให้ผู้ใช้คัดลอกเอง
       window.prompt('คัดลอกลิงก์ลูกค้า', url);
     }
-  }, [trip, notify]);
+  }, [trip, days, placeMap, googleReady, notify]);
 
   return {
     status,

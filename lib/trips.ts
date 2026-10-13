@@ -1,3 +1,4 @@
+import type { SupabaseClient } from '@supabase/supabase-js';
 import type { RouteData } from './routes';
 import { toLeg } from './routes';
 import { supabase } from './supabase';
@@ -40,10 +41,22 @@ export async function fetchTrip(idOrCurrent: string): Promise<TripData | null> {
     trip = data as Trip | null;
   }
   if (!trip) return null;
+  return { trip, days: await loadDays(db, trip.id) };
+}
 
+/** ทริปตาม share_token (ใช้ฝั่ง server กับ service role) */
+export async function fetchTripByToken(db: SupabaseClient, token: string): Promise<TripData | null> {
+  const { data, error } = await db.from('trips').select(TRIP_COLUMNS).eq('share_token', token).maybeSingle();
+  if (error) throw error;
+  if (!data) return null;
+  return { trip: data as Trip, days: await loadDays(db, (data as Trip).id) };
+}
+
+/** วัน + จุดแวะ + เส้นทางที่ cache ไว้ (ใช้ได้ทั้ง browser client และ server client) */
+export async function loadDays(db: SupabaseClient, tripId: string): Promise<DayData[]> {
   const [daysRes, routesRes] = await Promise.all([
-    db.from('trip_days').select('id,day_no,trip_stops(place_id,position,leg_km,leg_min)').eq('trip_id', trip.id).order('day_no'),
-    db.rpc('trip_day_routes', { p_trip: trip.id }),
+    db.from('trip_days').select('id,day_no,trip_stops(place_id,position,leg_km,leg_min)').eq('trip_id', tripId).order('day_no'),
+    db.rpc('trip_day_routes', { p_trip: tripId }),
   ]);
   if (daysRes.error) throw daysRes.error;
   const geoByDay = new Map<string, { type: 'LineString'; coordinates: [number, number][] }>(
@@ -51,7 +64,7 @@ export async function fetchTrip(idOrCurrent: string): Promise<TripData | null> {
   );
 
   type StopRow = { place_id: string; position: number; leg_km: number | null; leg_min: number | null };
-  const days: DayData[] = (daysRes.data as { id: string; day_no: number; trip_stops: StopRow[] }[]).map((d) => {
+  return (daysRes.data as { id: string; day_no: number; trip_stops: StopRow[] }[]).map((d) => {
     const stops = [...d.trip_stops].sort((a, b) => a.position - b.position);
     const geojson = geoByDay.get(d.id);
     const legRows = stops.slice(0, -1);
@@ -69,7 +82,6 @@ export async function fetchTrip(idOrCurrent: string): Promise<TripData | null> {
         : null,
     };
   });
-  return { trip, days };
 }
 
 /** สร้างทริปเริ่มต้นพร้อมวันที่ 1 */
