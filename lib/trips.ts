@@ -44,6 +44,15 @@ export async function fetchTrip(idOrCurrent: string): Promise<TripData | null> {
   return { trip, days: await loadDays(db, trip.id) };
 }
 
+/** ทริปล่าสุด โดย "ไม่" สร้างให้ถ้ายังไม่มี (ใช้ในหน้าที่แค่อ่านสถานะ เช่น ป้าย "ในทริป") */
+export async function fetchLatestTrip(): Promise<TripData | null> {
+  const db = supabase();
+  const { data, error } = await db.from('trips').select(TRIP_COLUMNS).order('created_at', { ascending: false }).limit(1).maybeSingle();
+  if (error) throw error;
+  if (!data) return null;
+  return { trip: data as Trip, days: await loadDays(db, (data as Trip).id) };
+}
+
 /** วัน + จุดแวะ + เส้นทางที่ cache ไว้ */
 export async function loadDays(db: SupabaseClient, tripId: string): Promise<DayData[]> {
   const [daysRes, routesRes] = await Promise.all([
