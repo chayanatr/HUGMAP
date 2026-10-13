@@ -1,4 +1,5 @@
 'use client';
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
@@ -33,7 +34,10 @@ export function AppNav({ apiStatus = 'demo' }: { apiStatus?: 'ok' | 'demo' | 'er
     <>
       <nav className="no-print relative z-[900] hidden w-rail-tab shrink-0 flex-col items-center gap-1.5 bg-brand py-[18px] md:flex lg:w-rail" aria-label="เมนูหลัก">
         <div className="flex flex-col items-center gap-1.5">
-          <div className="icon grid h-10 w-10 place-items-center rounded-item bg-white text-2xl text-brand">map</div>
+          {/* โลโก้เป็นเส้นเขียวเข้ม/ทอง ต้องอยู่บนพื้นขาว (กล่องโลโก้ตามดีไซน์เดิม) */}
+          <div className="grid h-10 w-10 place-items-center rounded-item bg-white">
+            <Image src="/brand/huglao-emblem.png" alt="" width={32} height={32} priority unoptimized />
+          </div>
           <div className="text-[10px] font-bold tracking-[.08em] text-white">HUGMAP</div>
         </div>
         <Link
