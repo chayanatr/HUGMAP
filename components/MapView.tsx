@@ -1,7 +1,7 @@
 'use client';
 // แผนที่ Google Maps (Maps JavaScript API ผ่าน @vis.gl/react-google-maps)
 // ใช้ผ่าน: const MapView = dynamic(() => import('@/components/MapView'), { ssr: false });
-import { AdvancedMarker, AdvancedMarkerAnchorPoint, APIProvider, Map, Pin, useMap } from '@vis.gl/react-google-maps';
+import { AdvancedMarker, AdvancedMarkerAnchorPoint, APIProvider, ControlPosition, Map, Pin, useMap } from '@vis.gl/react-google-maps';
 import { useEffect, useMemo, type CSSProperties, type ReactNode } from 'react';
 import { CAT } from '@/lib/categories';
 import { cn } from '@/lib/cn';
@@ -101,6 +101,7 @@ export default function MapView({
         gestureHandling="greedy"
         disableDefaultUI
         zoomControl
+        zoomControlOptions={{ position: ControlPosition.TOP_RIGHT }}
         onClick={(e) => e.detail.latLng && onPick?.(e.detail.latLng.lat, e.detail.latLng.lng)}
         className="h-full w-full"
       >
