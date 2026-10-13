@@ -37,7 +37,7 @@ export function PageShell({
 
 /** แถบบนของ panel สูง 64px */
 export function PanelHeader({ children }: { children: ReactNode }) {
-  return <div className="flex h-16 shrink-0 items-center gap-2.5 border-b border-line bg-panel px-4">{children}</div>;
+  return <div className="relative z-20 flex h-16 shrink-0 items-center gap-2.5 border-b border-line bg-panel px-4">{children}</div>;
 }
 
 /** เนื้อหา panel: padding 16, gap 14, scroll ภายในบน tablet/desktop */
