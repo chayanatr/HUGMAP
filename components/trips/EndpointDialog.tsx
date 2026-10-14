@@ -1,5 +1,6 @@
 'use client';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { MapSearch } from '@/components/MapSearch';
 import { Button } from '@/components/ui/Button';
 import { Icon } from '@/components/ui/Icon';
 import { Input } from '@/components/ui/Input';
@@ -51,7 +52,6 @@ export function EndpointDialog({
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const toast = useToast();
-  const [q, setQ] = useState('');
   const [gps, setGps] = useState(false);
   const [showErrors, setShowErrors] = useState(false);
 
@@ -65,14 +65,8 @@ export function EndpointDialog({
     if (!open && d.open) d.close();
   }, [open]);
 
-  // ที่พักขึ้นก่อน (จุดรับ/ส่งมักเป็นโรงแรม) แล้วตามด้วยชื่อที่ตรงกับคำค้น
-  const matches = useMemo(() => {
-    const needle = q.trim().toLowerCase();
-    return places
-      .filter((p) => (needle ? p.name.toLowerCase().includes(needle) : p.category === 'stay'))
-      .sort((a, b) => Number(b.category === 'stay') - Number(a.category === 'stay'))
-      .slice(0, 6);
-  }, [places, q]);
+  // ทางลัด: ที่พักที่บันทึกไว้ (จุดรับ/ส่งมักเป็นโรงแรม) — ค้นชื่ออื่นหรือสถานที่บน Google ใช้ช่องค้นหาด้านบน
+  const stays = places.filter((p) => p.category === 'stay').slice(0, 4);
 
   const hasCoords = draft.lat != null && draft.lng != null;
   const nameError = showErrors && !draft.name.trim() ? 'กรุณากรอกชื่อจุด' : '';
@@ -114,10 +108,15 @@ export function EndpointDialog({
 
         <div className="flex flex-col gap-2">
           <div className="text-label">1. เลือกตำแหน่ง</div>
-          <Input label="ค้นหาสถานที่ในระบบ" placeholder="เช่น ชื่อโรงแรม (ไม่ค้นหา = แสดงที่พัก)" value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && e.preventDefault()} />
+          {/* ค้นทั้งสถานที่ในระบบและ Google Maps (สนามบิน โรงแรม ร้านอาหาร ฯลฯ) */}
+          <MapSearch
+            places={places}
+            onSelectSaved={pickPlace}
+            onPickGoogle={(loc) => onChange({ name: loc.name || draft.name, lat: loc.lat, lng: loc.lng })}
+          />
+          {stays.length > 0 && <div className="text-label">ที่พักที่บันทึกไว้</div>}
           <ul className="flex flex-col gap-1.5">
-            {matches.length === 0 && <li className="px-1 text-[13px] text-muted">ไม่พบสถานที่ที่ตรงกับคำค้น</li>}
-            {matches.map((p) => {
+            {stays.map((p) => {
               const selected = hasCoords && draft.lat === p.lat && draft.lng === p.lng;
               return (
                 <li key={p.id}>
