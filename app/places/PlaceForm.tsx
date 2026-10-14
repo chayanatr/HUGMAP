@@ -3,6 +3,7 @@
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { MapSearch } from '@/components/MapSearch';
 import { PageShell, PanelBody, PanelHeader } from '@/components/shell/PageShell';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -14,6 +15,7 @@ import { useToast } from '@/components/ui/Toast';
 import { CATEGORIES, CITIES, LAO_BOUNDS } from '@/lib/categories';
 import { cn } from '@/lib/cn';
 import { fixMessage, geoErrorMessage, getMyPosition } from '@/lib/geolocation';
+import { guessCity } from '@/lib/geo';
 import {
   PHOTO_MAX_BYTES,
   PHOTO_MAX_COUNT,
@@ -72,6 +74,7 @@ export default function PlaceForm({ placeId }: { placeId?: string }) {
   const [submitted, setSubmitted] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
+  const [target, setTarget] = useState<{ lat: number; lng: number; zoom: number; key: number } | null>(null);
 
   useEffect(() => {
     if (!placeId) return;
@@ -99,6 +102,23 @@ export default function PlaceForm({ placeId }: { placeId?: string }) {
       cancelled = true;
     };
   }, [placeId]);
+
+  // เปิดจากแผนที่ (/places: "เพิ่มเป็นสถานที่ที่นี่") → เติมชื่อ/ที่อยู่/พิกัด/เมืองให้ แก้ไขต่อได้
+  useEffect(() => {
+    if (editing) return;
+    const q = new URLSearchParams(window.location.search);
+    const lat = parseFloat(q.get('lat') ?? ''), lng = parseFloat(q.get('lng') ?? '');
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+    setForm((f) => ({
+      ...f,
+      name: (q.get('name') ?? '').slice(0, 120),
+      desc: (q.get('address') ?? '').slice(0, 300),
+      lat: lat.toFixed(6),
+      lng: lng.toFixed(6),
+      city: guessCity({ lat, lng }),
+    }));
+    setTarget({ lat, lng, zoom: 17, key: 0 });
+  }, [editing]);
 
   useEffect(() => () => newPhotos.forEach((p) => URL.revokeObjectURL(p.preview)), [newPhotos]);
 
@@ -353,10 +373,25 @@ export default function PlaceForm({ placeId }: { placeId?: string }) {
             pin={pin}
             fitKey={`${placesStatus}|${loadState}`}
             focus={pin}
+            target={target}
             onPick={pick}
             myLocation
           />
-          <div className="pointer-events-none absolute left-4 top-4 z-[1000] flex max-w-[calc(100%-5.5rem)] items-center gap-2 rounded-item bg-brand-deep px-3.5 py-2.5 text-[13px] leading-snug text-white shadow-overlay">
+          <MapSearch
+            className="absolute left-3 top-3 z-[1000] w-[calc(100%-4.75rem)] md:w-[360px]"
+            onPickGoogle={(loc) => {
+              setForm((f) => ({
+                ...f,
+                name: f.name.trim() ? f.name : loc.name,
+                desc: f.desc.trim() ? f.desc : loc.address,
+                lat: loc.lat.toFixed(6),
+                lng: loc.lng.toFixed(6),
+                city: f.name.trim() ? f.city : guessCity(loc),
+              }));
+              setTarget({ lat: loc.lat, lng: loc.lng, zoom: 17, key: Date.now() });
+            }}
+          />
+          <div className="pointer-events-none absolute left-4 top-[68px] z-[1000] flex max-w-[calc(100%-5.5rem)] items-center gap-2 rounded-item bg-brand-deep px-3.5 py-2.5 text-[13px] leading-snug text-white shadow-overlay">
             <Icon name="touch_app" className="shrink-0 text-[18px] text-brand-mint" />
             คลิกบนแผนที่เพื่อปักหมุด หรือลากหมุดเพื่อปรับตำแหน่ง
           </div>
