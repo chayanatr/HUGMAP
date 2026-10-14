@@ -12,7 +12,10 @@ import { IconButton } from '@/components/ui/IconButton';
 import { Input, Textarea } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { useToast } from '@/components/ui/Toast';
-import { CATEGORIES, CITIES, LAO_BOUNDS } from '@/lib/categories';
+import { useCategories } from '@/components/CategoriesProvider';
+import { CategoryDialog } from '@/components/places/CategoryDialog';
+import { CITIES, LAO_BOUNDS } from '@/lib/categories';
+import { createCategory } from '@/lib/categoriesApi';
 import { cn } from '@/lib/cn';
 import { fixMessage, geoErrorMessage, getMyPosition } from '@/lib/geolocation';
 import { guessCity } from '@/lib/geo';
@@ -65,6 +68,8 @@ export default function PlaceForm({ placeId }: { placeId?: string }) {
   const toast = useToast();
   const editing = !!placeId;
   const { places, status: placesStatus } = usePlaces();
+  const { list: categories, reload: reloadCategories } = useCategories();
+  const [newCategoryOpen, setNewCategoryOpen] = useState(false);
 
   const [form, setForm] = useState<FormState>(EMPTY);
   const [loadState, setLoadState] = useState<LoadState>(editing ? 'loading' : 'ready');
@@ -240,9 +245,27 @@ export default function PlaceForm({ placeId }: { placeId?: string }) {
         <Card className="flex flex-col gap-4 p-4">
           <Input label="ชื่อสถานที่" required placeholder="เช่น วัดเชียงทอง" value={form.name} onChange={(e) => set('name', e.target.value)} error={errors.name} />
           <div className="flex flex-col gap-1.5">
-            <span className="text-[12px] font-medium text-muted">หมวด *</span>
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[12px] font-medium text-muted">หมวด *</span>
+              <span className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => setNewCategoryOpen(true)}
+                  className="flex h-11 items-center gap-1 rounded-input px-2 text-[12px] font-semibold text-brand-hover focus-visible:outline-none focus-visible:shadow-focus md:h-8"
+                >
+                  <Icon name="add" className="text-[16px]" />
+                  เพิ่มหมวดใหม่
+                </button>
+                <a
+                  href="/places/categories"
+                  className="flex h-11 items-center rounded-input px-2 text-[12px] text-muted underline focus-visible:outline-none focus-visible:shadow-focus md:h-8"
+                >
+                  จัดการ
+                </a>
+              </span>
+            </div>
             <div className="grid grid-cols-3 gap-2" role="group" aria-label="หมวด">
-              {CATEGORIES.map((c) => {
+              {categories.map((c) => {
                 const on = form.category === c.key;
                 return (
                   <button
@@ -258,7 +281,7 @@ export default function PlaceForm({ placeId }: { placeId?: string }) {
                     <span className="grid h-7 w-7 place-items-center rounded-[8px] text-[18px]" style={{ background: c.soft, color: c.color }}>
                       <Icon name={c.icon} />
                     </span>
-                    {c.label}
+                    <span className="line-clamp-1 px-1">{c.label}</span>
                   </button>
                 );
               })}
@@ -377,6 +400,22 @@ export default function PlaceForm({ placeId }: { placeId?: string }) {
             onPick={pick}
             myLocation
           />
+          {newCategoryOpen && (
+            // อยู่นอก <form> ของฟอร์มสถานที่ (กล่องนี้มีฟอร์มของตัวเอง)
+            <CategoryDialog
+              open
+              initial={null}
+              existingLabels={categories.map((c) => c.label)}
+              onSave={async (input) => {
+                const created = await createCategory(input, Math.max(0, ...categories.map((c) => c.sort)) + 1);
+                await reloadCategories();
+                set('category', created.key);
+                toast(`เพิ่มหมวด “${created.label}” แล้ว`);
+                setNewCategoryOpen(false);
+              }}
+              onClose={() => setNewCategoryOpen(false)}
+            />
+          )}
           <MapSearch
             className="absolute left-3 top-3 z-[1000] w-[calc(100%-4.75rem)] md:w-[360px]"
             onPickGoogle={(loc) => {

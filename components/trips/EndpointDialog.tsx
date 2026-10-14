@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/Button';
 import { Icon } from '@/components/ui/Icon';
 import { Input } from '@/components/ui/Input';
 import { useToast } from '@/components/ui/Toast';
-import { CAT } from '@/lib/categories';
+import { useCategories } from '@/components/CategoriesProvider';
 import { cn } from '@/lib/cn';
 import { geoErrorMessage, getMyPosition } from '@/lib/geolocation';
 import type { Endpoint, Place } from '@/lib/types';
@@ -52,6 +52,7 @@ export function EndpointDialog({
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const toast = useToast();
+  const { cat } = useCategories();
   const [gps, setGps] = useState(false);
   const [showErrors, setShowErrors] = useState(false);
 
@@ -129,9 +130,9 @@ export function EndpointDialog({
                       selected ? 'border-brand bg-brand-soft' : 'border-line-border bg-surface hover:bg-bg',
                     )}
                   >
-                    <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: CAT[p.category].color }} />
+                    <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: cat(p.category).color }} />
                     <span className="min-w-0 flex-1 truncate">{p.name}</span>
-                    <span className="shrink-0 text-label">{CAT[p.category].label}</span>
+                    <span className="shrink-0 text-label">{cat(p.category).label}</span>
                   </button>
                 </li>
               );

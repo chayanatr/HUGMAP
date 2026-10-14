@@ -3,13 +3,15 @@ import { useMemo, useState } from 'react';
 import { SearchField } from '@/components/shell/SearchField';
 import { CategoryTile } from '@/components/places/PlaceCard';
 import { Icon } from '@/components/ui/Icon';
-import { CAT, CITY_LABEL } from '@/lib/categories';
+import { useCategories } from '@/components/CategoriesProvider';
+import { CITY_LABEL } from '@/lib/categories';
 import type { Place } from '@/lib/types';
 
 const MAX_RESULTS = 6;
 
 /** ช่องค้นหาเพื่อเพิ่มสถานที่ + dropdown ผลลัพธ์ ≤6 รายการ (วางใน PanelHeader ซึ่งเป็น relative) */
 export function AddPlaceSearch({ places, excludeIds, onAdd }: { places: Place[]; excludeIds: Set<string>; onAdd: (p: Place) => void }) {
+  const { cat } = useCategories();
   const [q, setQ] = useState('');
   const [open, setOpen] = useState(false);
   const results = useMemo(() => {
@@ -61,7 +63,7 @@ export function AddPlaceSearch({ places, excludeIds, onAdd }: { places: Place[];
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-[14px] font-semibold">{p.name}</span>
                   <span className="block text-label">
-                    {CAT[p.category].label} · {CITY_LABEL[p.city]}
+                    {cat(p.category).label} · {CITY_LABEL[p.city]}
                   </span>
                 </span>
                 <Icon name="add_circle" className="text-[22px] text-brand" />

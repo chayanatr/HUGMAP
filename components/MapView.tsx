@@ -3,7 +3,7 @@
 // ใช้ผ่าน: const MapView = dynamic(() => import('@/components/MapView'), { ssr: false });
 import { AdvancedMarker, AdvancedMarkerAnchorPoint, ControlPosition, Map, MapControl, Pin, useMap } from '@vis.gl/react-google-maps';
 import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
-import { CAT } from '@/lib/categories';
+import { useCategories } from '@/components/CategoriesProvider';
 import { cn } from '@/lib/cn';
 import { fixMessage, geoErrorMessage, getMyPosition, type Fix } from '@/lib/geolocation';
 import type { CategoryKey, Endpoint } from '@/lib/types';
@@ -173,6 +173,7 @@ export default function MapView({
   /** กดบนแผนที่ (placeId = กดโดนสถานที่ของ Google) หรือลากหมุด pin */
   onPick?: (lat: number, lng: number, placeId?: string) => void;
 }) {
+  const { cat } = useCategories();
   const line = useMemo<LL[]>(
     () =>
       routeLine
@@ -219,7 +220,7 @@ export default function MapView({
         {myLocation && <MyLocation />}
 
         {places.map((p) => {
-          const c = CAT[p.category ?? 'temple'];
+          const c = cat(p.category);
           const size = p.selected ? 36 : 26;
           return (
             <AdvancedMarker
@@ -238,7 +239,7 @@ export default function MapView({
         })}
 
         {nearby.map((p) => {
-          const c = CAT[p.category ?? 'temple'];
+          const c = cat(p.category);
           return (
             <AdvancedMarker key={`n${p.id}`} position={p} title={`ใกล้เส้นทาง · ${p.name}`} anchorPoint={AdvancedMarkerAnchorPoint.CENTER}>
               <Dot size={26} className="border-dashed bg-white" style={{ borderColor: c.color, color: c.color, fontSize: 15 }}>

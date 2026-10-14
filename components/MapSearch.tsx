@@ -2,7 +2,7 @@
 // ช่องค้นหาลอยบนแผนที่: สถานที่ที่บันทึกไว้ในระบบ + สถานที่ทั่วไปบน Google Maps (Places API)
 // ใช้ใต้ <MapProvider> ผ่าน dynamic import ร่วมกับ MapView
 import { useEffect, useId, useRef, useState } from 'react';
-import { CAT } from '@/lib/categories';
+import { useCategories } from '@/components/CategoriesProvider';
 import { cn } from '@/lib/cn';
 import { newSessionToken, resolveSuggestion, suggest, type PickedLocation, type Suggestion } from '@/lib/placesSearch';
 import type { Place } from '@/lib/types';
@@ -28,6 +28,7 @@ export function MapSearch({
   className?: string;
 }) {
   const ready = useGoogleReady();
+  const { cat } = useCategories();
   const listId = useId();
   const box = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -148,9 +149,9 @@ export function MapSearch({
           {saved.map((p) => (
             <li key={p.id} role="option" aria-selected={false}>
               <button type="button" onClick={() => pickSaved(p)} className="flex min-h-[44px] w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-bg focus-visible:outline-none focus-visible:shadow-focus">
-                <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: CAT[p.category].color }} />
+                <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: cat(p.category).color }} />
                 <span className="min-w-0 flex-1 truncate text-[14px]">{p.name}</span>
-                <span className="shrink-0 text-label">{CAT[p.category].label}</span>
+                <span className="shrink-0 text-label">{cat(p.category).label}</span>
               </button>
             </li>
           ))}

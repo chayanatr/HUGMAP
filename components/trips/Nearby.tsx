@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/Button';
 import { Card, DarkCard } from '@/components/ui/Card';
 import { Icon } from '@/components/ui/Icon';
 import { Pill } from '@/components/ui/Pill';
-import { CAT, NEARBY_FILTERS, RADIUS_OPTIONS_KM, type NearbyFilterKey } from '@/lib/categories';
+import { useCategories } from '@/components/CategoriesProvider';
+import { NEARBY_FILTERS, RADIUS_OPTIONS_KM, hasUngrouped, type NearbyFilterKey } from '@/lib/categories';
 import { cn } from '@/lib/cn';
 import { fmtDuration, fmtKm } from '@/lib/geo';
 import type { Endpoint, ScheduledStop, NearbyHit } from '@/lib/types';
@@ -15,9 +16,12 @@ const segmentLabel = (h: NearbyHit) => h.between ?? `ช่วงจุด ${h.s
 
 /** ตัวกรองหมวดของรายการแนะนำ (ร้านอาหาร/ท่องเที่ยว/ตลาด) */
 export function CategoryFilter({ value, onChange, className }: { value: NearbyFilterKey; onChange: (k: NearbyFilterKey) => void; className?: string }) {
+  const { list } = useCategories();
+  // ชิป "อื่น ๆ" แสดงเมื่อมีหมวดที่ผู้ดูแลเพิ่มเอง (นอกกลุ่มมาตรฐาน)
+  const showOther = hasUngrouped(list.map((c) => c.key));
   return (
     <div role="group" aria-label="กรองหมวด" className={cn('flex gap-1.5 overflow-x-auto', className)}>
-      {NEARBY_FILTERS.map((f) => (
+      {NEARBY_FILTERS.filter((f) => f.key !== 'other' || showOther).map((f) => (
         <button
           key={f.key}
           type="button"
@@ -75,6 +79,7 @@ export function NearbyBar({
   onFilter: (k: NearbyFilterKey) => void;
   onAdd: (h: NearbyHit) => void;
 }) {
+  const { cat } = useCategories();
   return (
     <div className="pointer-events-none absolute bottom-5 left-4 right-4 z-[1000] flex flex-col gap-2.5 max-md:hidden lg:right-[308px]">
       <div className="pointer-events-auto flex flex-wrap items-center gap-3">
@@ -91,7 +96,7 @@ export function NearbyBar({
               <div className="min-w-0">
                 <div className="truncate text-[14px] font-semibold">{h.place.name}</div>
                 <div className="truncate text-label">
-                  {CAT[h.place.category].label} · {segmentLabel(h)}
+                  {cat(h.place.category).label} · {segmentLabel(h)}
                 </div>
               </div>
               <div className="flex items-center justify-between gap-2">
@@ -126,6 +131,7 @@ export function NearbyPanelCard({
   onFilter: (k: NearbyFilterKey) => void;
   onAdd: (h: NearbyHit) => void;
 }) {
+  const { cat } = useCategories();
   return (
     <Card className="flex flex-col gap-3 p-4 md:hidden">
       <h2 className="text-[16px] font-bold">แนะนำใกล้เส้นทาง · วันที่ {dayNo}</h2>
@@ -141,7 +147,7 @@ export function NearbyPanelCard({
             <div className="min-w-0 flex-1">
               <div className="truncate text-[14px] font-semibold">{h.place.name}</div>
               <div className="truncate text-label">
-                {CAT[h.place.category].label} · {segmentLabel(h)} · ห่าง {fmtKm(h.distanceKm)}
+                {cat(h.place.category).label} · {segmentLabel(h)} · ห่าง {fmtKm(h.distanceKm)}
               </div>
             </div>
             <Button variant="soft" onClick={() => onAdd(h)}>

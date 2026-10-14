@@ -4,7 +4,8 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Icon } from '@/components/ui/Icon';
 import { Select } from '@/components/ui/Select';
-import { CATEGORIES, CITIES } from '@/lib/categories';
+import { useCategories } from '@/components/CategoriesProvider';
+import { CITIES } from '@/lib/categories';
 import { cn } from '@/lib/cn';
 import type { CategoryKey } from '@/lib/types';
 
@@ -24,6 +25,7 @@ export function PlaceFilters({
   onCats: (v: CategoryKey[]) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const { list: categories } = useCategories();
   const active = cats.length > 0;
   const toggle = (k: CategoryKey) => onCats(cats.includes(k) ? cats.filter((x) => x !== k) : [...cats, k]);
 
@@ -48,7 +50,7 @@ export function PlaceFilters({
       {open && (
         <Card className="flex flex-col gap-3 p-3">
           <div className="flex flex-wrap gap-2">
-            {CATEGORIES.map((c) => {
+            {categories.map((c) => {
               const on = cats.includes(c.key);
               return (
                 <button

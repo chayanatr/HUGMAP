@@ -2,12 +2,13 @@
 import { Card, LabelValue } from '@/components/ui/Card';
 import { Icon } from '@/components/ui/Icon';
 import { Pill } from '@/components/ui/Pill';
-import { CAT, CITY_LABEL } from '@/lib/categories';
+import { useCategories } from '@/components/CategoriesProvider';
+import { CITY_LABEL } from '@/lib/categories';
 import { fmtDuration } from '@/lib/geo';
 import type { Place } from '@/lib/types';
 
 export function CategoryTile({ category, size = 44, iconPx = 22 }: { category: Place['category']; size?: number; iconPx?: number }) {
-  const c = CAT[category];
+  const c = useCategories().cat(category);
   return (
     <div className="grid shrink-0 place-items-center rounded-item" style={{ width: size, height: size, background: c.soft, color: c.color, fontSize: iconPx }}>
       <Icon name={c.icon} />
@@ -17,7 +18,7 @@ export function CategoryTile({ category, size = 44, iconPx = 22 }: { category: P
 
 /** การ์ดสถานที่ในรายการ — กดเพื่อเลือก (ring เขียวเมื่อเลือก) */
 export function PlaceCard({ place, selected, inTrip, onSelect }: { place: Place; selected: boolean; inTrip?: boolean; onSelect: (id: string) => void }) {
-  const c = CAT[place.category];
+  const c = useCategories().cat(place.category);
   return (
     <Card
       id={`place-${place.id}`}

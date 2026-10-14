@@ -88,6 +88,7 @@ export default function PlacesPage() {
         <>
           <PanelHeader>
             <SearchField label="ค้นหาชื่อสถานที่" placeholder="ค้นหาสถานที่…" value={q} onChange={(e) => setQ(e.target.value)} />
+            {isAdmin && <IconButton icon="category" label="จัดการหมวดสถานที่" href="/places/categories" />}
             {isAdmin && <IconButton variant="primary" icon="add_location_alt" label="เพิ่มสถานที่" href="/places/new" />}
           </PanelHeader>
           <PanelBody>
