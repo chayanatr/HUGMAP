@@ -45,6 +45,7 @@ HUGMAP คือเว็บแอปสำหรับพนักงานบ�
 - RLS เปิดทุกตาราง: role `admin` (ใน `app_metadata.role`) จัดการ places ได้, `staff` อ่าน places และจัดเส้นทางได้; ผู้ใช้ที่ไม่มี role เข้าไม่ได้ — ตั้ง role ผ่าน dashboard/SQL เท่านั้น (ผู้ใช้แก้เองไม่ได้)
 - ไม่มีสมัครสมาชิกเอง: ผู้ดูแลสร้างผู้ใช้ใน Supabase Auth แล้วตั้ง `app_metadata.role`; ปิด "Allow new users to sign up" ใน Auth settings
 - ลิงก์ลูกค้า `/share/[token]` อ่านผ่านฟังก์ชัน `shared_trip(token)` (security definer, คืนเฉพาะทริปที่ตรง token) ด้วย anon key — **ไม่ใช้ service role key** (เปลี่ยนจากแผนเดิมโดยตั้งใจ ไม่ต้องเก็บกุญแจที่ข้าม RLS บนเซิร์ฟเวอร์)
+- รีเซ็ตรหัสผ่าน: หน้า `/login` มี "ลืมรหัสผ่าน?" และ `/reset-password` รับลิงก์จากอีเมล — ต้องตั้ง Supabase Auth → URL Configuration: **Site URL** = โดเมนจริง (`https://hugmap-app.vercel.app`) และเพิ่ม **Redirect URLs** (`https://hugmap-app.vercel.app/**`, `http://localhost:3000/**`) ทั้ง dev และ production ไม่เช่นนั้นลิงก์ในอีเมลจะชี้ไป localhost
 - ไม่มี dev-policies แล้ว: dev ก็ต้องล็อกอินด้วยผู้ใช้ที่มี role เหมือน production
 - ข้อความ error/toast ใช้ภาษาไทยตาม README
 

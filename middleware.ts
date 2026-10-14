@@ -1,8 +1,8 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
-// หน้าที่ไม่ต้องล็อกอิน: เข้าสู่ระบบ และลิงก์ลูกค้า (กรองด้วย share_token ที่ฐานข้อมูล)
-const isPublic = (path: string) => path === '/login' || path.startsWith('/share/');
+// หน้าที่ไม่ต้องล็อกอิน: เข้าสู่ระบบ, ตั้งรหัสผ่านใหม่ (ลิงก์จากอีเมลรีเซ็ต) และลิงก์ลูกค้า (กรองด้วย share_token ที่ฐานข้อมูล)
+const isPublic = (path: string) => path === '/login' || path === '/reset-password' || path.startsWith('/share/');
 // หน้าที่เฉพาะ admin (จัดการสถานที่) — staff ถูกส่งกลับไปแผนที่
 const isAdminOnly = (path: string) => path === '/places/new' || /^\/places\/[^/]+\/edit$/.test(path);
 
