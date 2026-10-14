@@ -65,6 +65,18 @@ function Focus({ point }: { point?: LL | null }) {
   return null;
 }
 
+/** บินไปยังจุดที่ค้นหา: เลื่อนกึ่งกลาง + ตั้งระดับซูม (ต่างจาก Focus ที่เลื่อนเฉพาะเมื่อจุดอยู่นอกจอ) */
+function FlyTo({ target }: { target?: (LL & { zoom?: number; key?: number }) | null }) {
+  const map = useMap();
+  useEffect(() => {
+    if (!map || !target) return;
+    map.panTo(target);
+    map.setZoom(target.zoom ?? 16);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [map, target?.lat, target?.lng, target?.key]);
+  return null;
+}
+
 function Line({ path, weight, opacity }: { path: LL[]; weight: number; opacity: number }) {
   const map = useMap();
   useEffect(() => {
@@ -147,15 +159,19 @@ function MyLocation() {
 }
 
 export default function MapView({
-  theme = 'light', stops = [], places = [], nearby = [], routeLine, start, end, pin, fitKey = 'default', focus, myLocation = false, onSelect, onPick,
+  theme = 'light', stops = [], places = [], nearby = [], routeLine, start, end, pin, fitKey = 'default', focus, target, myLocation = false, onSelect, onPick,
 }: {
   theme?: 'light' | 'dark'; stops?: Pt[]; places?: Pt[]; nearby?: Pt[]; routeLine?: [number, number][];
   /** จุดรับ/ส่งลูกค้าของวัน — วาดเป็นหมุดพิเศษและรวมในเส้นตรงสำรอง/การ fit */
   start?: Endpoint | null; end?: Endpoint | null;
   pin?: LL | null; fitKey?: string; focus?: LL | null;
+  /** บินไปยังจุด (ผลค้นหา): เลื่อน + ซูม; key เปลี่ยนเพื่อบินซ้ำจุดเดิม */
+  target?: (LL & { zoom?: number; key?: number }) | null;
   /** แสดงปุ่ม "ตำแหน่งของฉัน" (GPS) — ใช้ในหน้าที่พนักงานใช้ (ไม่ใช้ในหน้าสรุป/ลิงก์ลูกค้า) */
   myLocation?: boolean;
-  onSelect?: (id: string) => void; onPick?: (lat: number, lng: number) => void;
+  onSelect?: (id: string) => void;
+  /** กดบนแผนที่ (placeId = กดโดนสถานที่ของ Google) หรือลากหมุด pin */
+  onPick?: (lat: number, lng: number, placeId?: string) => void;
 }) {
   const line = useMemo<LL[]>(
     () =>
@@ -190,11 +206,16 @@ export default function MapView({
         zoomControl
         controlSize={window.innerWidth < 640 ? 44 : undefined} // mobile: ปุ่มกดอย่างน้อย 44px
         zoomControlOptions={{ position: ControlPosition.TOP_RIGHT }}
-        onClick={(e) => e.detail.latLng && onPick?.(e.detail.latLng.lat, e.detail.latLng.lng)}
+        onClick={(e) => {
+          if (!e.detail.latLng || !onPick) return;
+          if (e.detail.placeId) e.stop(); // ไม่ให้ขึ้นกล่องข้อมูลของ Google ซ้อนกับของเรา
+          onPick(e.detail.latLng.lat, e.detail.latLng.lng, e.detail.placeId ?? undefined);
+        }}
         className="h-full w-full"
       >
         <Fit points={fitPts} fitKey={fitKey} />
         <Focus point={focus} />
+        <FlyTo target={target} />
         {myLocation && <MyLocation />}
 
         {places.map((p) => {

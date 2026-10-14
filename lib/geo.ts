@@ -1,4 +1,4 @@
-import type { Endpoint, Leg, NearbyHit, Place, ScheduledStop } from './types';
+import type { CityKey, Endpoint, Leg, NearbyHit, Place, ScheduledStop } from './types';
 
 type LL = { lat: number; lng: number };
 const rad = (d: number) => (d * Math.PI) / 180;
@@ -143,3 +143,16 @@ export function autoOrder(places: Place[]): Place[] {
 export const fmtKm = (km: number) => (km < 1 ? Math.round(km * 100) * 10 + ' ม.' : (km < 10 ? km.toFixed(1) : Math.round(km)) + ' กม.');
 export const fmtDuration = (m: number) => (m < 60 ? m + ' นาที' : Math.floor(m / 60) + ' ชม.' + (m % 60 ? ' ' + (m % 60) + ' นาที' : ''));
 export const fmtClock = (m: number) => String(Math.floor(m / 60) % 24).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
+
+const CITY_CENTERS: { key: CityKey; lat: number; lng: number }[] = [
+  { key: 'lp', lat: 19.8856, lng: 102.1347 },
+  { key: 'vte', lat: 17.9757, lng: 102.6331 },
+  { key: 'vv', lat: 18.9226, lng: 102.4478 },
+  { key: 'pakse', lat: 15.1202, lng: 105.799 },
+];
+
+/** เมือง/แขวงที่ใกล้ที่สุด (ไม่เกิน 60 กม. จากใจกลางเมือง) ไม่เช่นนั้น 'other' — ใช้เติมค่าเริ่มต้นตอนเพิ่มสถานที่จากแผนที่ */
+export function guessCity(p: LL): CityKey {
+  const best = CITY_CENTERS.map((c) => ({ key: c.key, d: haversineKm(p, c) })).sort((a, b) => a.d - b.d)[0];
+  return best.d <= 60 ? best.key : 'other';
+}
