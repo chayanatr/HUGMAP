@@ -21,3 +21,12 @@ export const CITY_LABEL = Object.fromEntries(CITIES.map((c) => [c.key, c.label])
 
 export const LAO_BOUNDS = { latMin: 13.9, latMax: 22.5, lngMin: 100.0, lngMax: 107.7 };
 export const RADIUS_OPTIONS_KM = [0.5, 1, 2, 3, 5];
+
+/** ตัวกรองหมวดของรายการแนะนำใกล้เส้นทาง */
+export type NearbyFilterKey = 'all' | 'eat' | 'sight' | 'shop';
+export const NEARBY_FILTERS: { key: NearbyFilterKey; label: string; icon: string; cats: CategoryKey[] | null }[] = [
+  { key: 'all', label: 'ทั้งหมด', icon: 'apps', cats: null },
+  { key: 'eat', label: 'ร้านอาหาร/คาเฟ่', icon: 'restaurant', cats: ['food', 'cafe'] },
+  { key: 'sight', label: 'ท่องเที่ยว', icon: 'landscape', cats: ['temple', 'nature', 'view', 'museum'] },
+  { key: 'shop', label: 'ตลาด/ของฝาก', icon: 'storefront', cats: ['market', 'gift'] },
+];

@@ -5,13 +5,36 @@ import { Button } from '@/components/ui/Button';
 import { Card, DarkCard } from '@/components/ui/Card';
 import { Icon } from '@/components/ui/Icon';
 import { Pill } from '@/components/ui/Pill';
-import { CAT, RADIUS_OPTIONS_KM } from '@/lib/categories';
+import { CAT, NEARBY_FILTERS, RADIUS_OPTIONS_KM, type NearbyFilterKey } from '@/lib/categories';
 import { cn } from '@/lib/cn';
 import { fmtDuration, fmtKm } from '@/lib/geo';
-import type { ScheduledStop, NearbyHit } from '@/lib/types';
+import type { Endpoint, ScheduledStop, NearbyHit } from '@/lib/types';
 
 const radiusLabel = (km: number) => (km < 1 ? `${km * 1000} ม.` : `${km} กม.`);
-const segmentLabel = (h: NearbyHit) => `ช่วงจุด ${h.segment + 1}–${h.segment + 2}`;
+const segmentLabel = (h: NearbyHit) => h.between ?? `ช่วงจุด ${h.segment + 1}–${h.segment + 2}`;
+
+/** ตัวกรองหมวดของรายการแนะนำ (ร้านอาหาร/ท่องเที่ยว/ตลาด) */
+export function CategoryFilter({ value, onChange, className }: { value: NearbyFilterKey; onChange: (k: NearbyFilterKey) => void; className?: string }) {
+  return (
+    <div role="group" aria-label="กรองหมวด" className={cn('flex gap-1.5 overflow-x-auto', className)}>
+      {NEARBY_FILTERS.map((f) => (
+        <button
+          key={f.key}
+          type="button"
+          aria-pressed={f.key === value}
+          onClick={() => onChange(f.key)}
+          className={cn(
+            'inline-flex h-11 shrink-0 items-center gap-1 rounded-input px-3 text-[13px] font-medium focus-visible:outline-none focus-visible:shadow-focus md:h-8',
+            f.key === value ? 'bg-brand text-white' : 'bg-surface text-ink shadow-overlay hover:bg-bg',
+          )}
+        >
+          <Icon name={f.icon} className="text-[16px]" />
+          {f.label}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 export function RadiusTabs({ value, onChange, className }: { value: number; onChange: (km: number) => void; className?: string }) {
   return (
@@ -40,12 +63,16 @@ export function NearbyBar({
   hits,
   radiusKm,
   onRadius,
+  filter,
+  onFilter,
   onAdd,
 }: {
   dayNo: number;
   hits: NearbyHit[];
   radiusKm: number;
   onRadius: (km: number) => void;
+  filter: NearbyFilterKey;
+  onFilter: (k: NearbyFilterKey) => void;
   onAdd: (h: NearbyHit) => void;
 }) {
   return (
@@ -53,6 +80,7 @@ export function NearbyBar({
       <div className="pointer-events-auto flex flex-wrap items-center gap-3">
         <h2 className="rounded-input bg-surface/90 px-2.5 py-1 text-h2 shadow-overlay">ใกล้เส้นทาง · วันที่ {dayNo}</h2>
         <RadiusTabs value={radiusKm} onChange={onRadius} />
+        <CategoryFilter value={filter} onChange={onFilter} />
       </div>
       <div className="pointer-events-auto flex gap-2.5 overflow-x-auto pb-1">
         {hits.length === 0 && <Card className="px-4 py-3 text-[13px] text-muted shadow-overlay">ไม่พบสถานที่ในรัศมี {radiusLabel(radiusKm)} ลองขยายรัศมี</Card>}
@@ -86,12 +114,16 @@ export function NearbyPanelCard({
   hits,
   radiusKm,
   onRadius,
+  filter,
+  onFilter,
   onAdd,
 }: {
   dayNo: number;
   hits: NearbyHit[];
   radiusKm: number;
   onRadius: (km: number) => void;
+  filter: NearbyFilterKey;
+  onFilter: (k: NearbyFilterKey) => void;
   onAdd: (h: NearbyHit) => void;
 }) {
   return (
@@ -100,6 +132,7 @@ export function NearbyPanelCard({
       <div className="-mx-1 overflow-x-auto px-1 pb-1">
         <RadiusTabs value={radiusKm} onChange={onRadius} className="shadow-none ring-1 ring-line-border" />
       </div>
+      <CategoryFilter value={filter} onChange={onFilter} className="-mx-1 px-1 pb-1 [&>button]:shadow-none [&>button:not([aria-pressed=true])]:ring-1 [&>button:not([aria-pressed=true])]:ring-line-border" />
       {hits.length === 0 && <p className="text-[13px] leading-[1.6] text-muted">ไม่พบสถานที่ในรัศมี {radiusLabel(radiusKm)} ลองขยายรัศมี</p>}
       <ul className="flex flex-col gap-2">
         {hits.slice(0, 8).map((h) => (
@@ -122,9 +155,25 @@ export function NearbyPanelCard({
 }
 
 /** การ์ดสรุปวันสีเขียวเข้มมุมขวาล่างของแผนที่ (desktop เท่านั้น) */
-export function DesktopRouteCard({ dayNo, stops, travelMin, km, summaryHref }: { dayNo: number; stops: ScheduledStop[]; travelMin: number; km: number; summaryHref: string }) {
-  const first = stops[0]?.place;
-  const last = stops.length > 1 ? stops[stops.length - 1].place : null;
+export function DesktopRouteCard({
+  dayNo,
+  stops,
+  travelMin,
+  km,
+  summaryHref,
+  start,
+  end,
+}: {
+  dayNo: number;
+  stops: ScheduledStop[];
+  travelMin: number;
+  km: number;
+  summaryHref: string;
+  start?: Endpoint | null;
+  end?: Endpoint | null;
+}) {
+  const first = start ?? stops[0]?.place;
+  const last = end ?? (stops.length > 1 ? stops[stops.length - 1].place : null);
   return (
     <DarkCard className="absolute bottom-5 right-4 z-[1000] flex w-[280px] flex-col gap-3 max-lg:hidden">
       <div className="flex items-center gap-3">

@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ensureDayRoute, roadHitsFor } from './dayRoutes';
 import { buildSummaryData, type RoadHits } from './summary';
-import { ensureShareToken, fetchTrip, reorderDay, revokeShareToken, type DayData } from './trips';
+import { canRoute, ensureShareToken, fetchTrip, reorderDay, revokeShareToken, type DayData } from './trips';
 import type { Place, Trip } from './types';
 import { useGoogleReady } from './useGoogleReady';
 
@@ -41,9 +41,9 @@ export function useTripSummary(tripId: string, places: Place[], placesReady: boo
   // คำนวณเส้นทางของวันที่ยังไม่มี cache (วันที่ไม่เคยเปิดในหน้าจัดเส้นทาง)
   useEffect(() => {
     if (!googleReady || !placesReady) return;
-    const todo = days.filter((d) => !d.route && d.placeIds.length > 1);
+    const todo = days.filter((d) => !d.route && canRoute(d.placeIds.length, d.start, d.end));
     todo.forEach(async (d) => {
-      const key = `${d.id}:${d.placeIds.join(',')}`;
+      const key = `${d.id}:${d.placeIds.join(',')}:${d.start?.lat},${d.start?.lng}|${d.end?.lat},${d.end?.lng}`;
       if (inflight.current.has(key) || failed.current.has(key)) return;
       inflight.current.add(key);
       setRouting(true);

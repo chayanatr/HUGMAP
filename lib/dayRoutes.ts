@@ -1,15 +1,16 @@
+import { routePoints } from './geo';
 import { fetchRoute, type RouteData } from './routes';
 import { placesNearRoute } from './supabase';
-import { saveDayRoute, type DayData } from './trips';
+import { canRoute, saveDayRoute, type DayData } from './trips';
 import type { Place } from './types';
 
 /** เส้นทางของวัน: ใช้ที่ cache ไว้ ถ้าไม่มีคำนวณจาก Google Routes แล้วบันทึกลง DB (null = ไม่มีจุดพอ/สถานที่ยังโหลดไม่ครบ) */
 export async function ensureDayRoute(day: DayData, placeMap: Map<string, Place>): Promise<RouteData | null> {
   if (day.route) return day.route;
-  if (day.placeIds.length < 2) return null;
+  if (!canRoute(day.placeIds.length, day.start, day.end)) return null;
   const pts = day.placeIds.map((id) => placeMap.get(id));
   if (pts.some((p) => !p)) return null;
-  const route = await fetchRoute(pts as Place[]);
+  const route = await fetchRoute(routePoints(day.start, pts as Place[], day.end), !!day.start);
   await saveDayRoute(day.id, day.placeIds, route);
   return route;
 }

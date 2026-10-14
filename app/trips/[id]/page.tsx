@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { PageShell, PanelBody, PanelHeader } from '@/components/shell/PageShell';
 import { AddPlaceSearch } from '@/components/trips/AddPlaceSearch';
+import { EndpointDialog, KIND_LABEL, type EndpointDraft, type EndpointKind } from '@/components/trips/EndpointDialog';
 import { DesktopRouteCard, NearbyBar, NearbyPanelCard } from '@/components/trips/Nearby';
 import { StopList } from '@/components/trips/StopList';
 import { TripCard } from '@/components/trips/TripCard';
@@ -26,6 +27,14 @@ export default function TripPlannerPage({ params }: { params: { id: string } }) 
   const planner = useTripPlanner(params.id, places, toast);
   const { status, trip, days, day, dayIdx, dayPlaces, sched, hits, radiusKm, actions } = planner;
   const [editing, setEditing] = useState(false);
+  // แก้ไขจุดรับ/ส่ง: draft อยู่ที่หน้านี้เพราะ "แตะบนแผนที่" ต้องปิดกล่องชั่วคราว
+  const [ep, setEp] = useState<{ kind: EndpointKind; draft: EndpointDraft; picking: boolean } | null>(null);
+  const openEndpoint = (kind: EndpointKind) => {
+    const cur = kind === 'start' ? day?.start : day?.end;
+    setEp({ kind, draft: cur ? { ...cur } : { name: '', lat: null, lng: null }, picking: false });
+  };
+  const pickOnMap = (lat: number, lng: number) =>
+    setEp((cur) => (cur?.picking ? { ...cur, picking: false, draft: { name: cur.draft.name.trim() || KIND_LABEL[cur.kind], lat, lng } } : cur));
 
   // /trips/current → แสดง id จริงใน URL โดยไม่โหลดหน้าใหม่; ยังไม่มีทริปเลย → ไปหน้ารายการทริปเพื่อสร้าง
   useEffect(() => {
@@ -37,7 +46,7 @@ export default function TripPlannerPage({ params }: { params: { id: string } }) 
   const stopPts = useMemo(() => dayPlaces.map((p) => ({ id: p.id, lat: p.lat, lng: p.lng, name: p.name, category: p.category })), [dayPlaces]);
   const nearbyPts = useMemo(() => hits.map((h) => ({ id: h.place.id, lat: h.place.lat, lng: h.place.lng, name: h.place.name, category: h.place.category })), [hits]);
   const placesReady = placesStatus === 'ready';
-  const fitKey = `${trip?.id}|${day?.id}|${placesReady}`;
+  const fitKey = `${trip?.id}|${day?.id}|${placesReady}|${day?.start?.lat},${day?.start?.lng}|${day?.end?.lat},${day?.end?.lng}`;
   const summaryHref = trip ? `/trips/${trip.id}/summary?r=${radiusKm}` : '#';
 
   const newTrip = async () => {
@@ -90,6 +99,7 @@ export default function TripPlannerPage({ params }: { params: { id: string } }) 
                   days={days}
                   dayIdx={dayIdx}
                   sched={sched}
+                  hasStart={!!day.start}
                   isRoad={planner.isRoad}
                   routeLoading={planner.routeLoading}
                   onSelectDay={planner.setDayIdx}
@@ -100,19 +110,38 @@ export default function TripPlannerPage({ params }: { params: { id: string } }) 
                   onEdit={() => setEditing(true)}
                 />
 
-                {day.placeIds.length === 0 ? (
-                  <Card className="p-4 text-[14px] leading-[1.6] text-muted">ยังไม่มีจุดแวะในวันที่ {day.dayNo} ค้นหาชื่อสถานที่ในช่องด้านบนเพื่อเพิ่ม</Card>
-                ) : (
-                  <StopList
-                    stops={sched.stops}
-                    hits={hits}
-                    onMove={actions.moveStop}
-                    onRemove={actions.removeStop}
-                    onAddNearby={(h, at) => actions.addPlace(h.place, at)}
-                  />
+                {day.placeIds.length === 0 && (
+                  <Card className="flex flex-col items-start gap-3 p-4 text-[14px] leading-[1.6] text-muted">
+                    <p>
+                      {day.start && day.end
+                        ? planner.allHitsCount
+                          ? `พบสถานที่แนะนำระหว่างจุดรับ–จุดส่ง ${planner.allHitsCount} แห่ง เพิ่มทีละแห่งจากรายการด้านล่าง หรือให้ระบบเลือกให้`
+                          : planner.routeLoading
+                            ? 'กำลังหาสถานที่ระหว่างจุดรับ–จุดส่ง…'
+                            : 'ไม่พบสถานที่ในรัศมีนี้ ลองขยายรัศมีค้นหา หรือค้นหาชื่อสถานที่ด้านบน'
+                        : `ตั้งจุดรับและจุดส่งลูกค้าของวันที่ ${day.dayNo} แล้วระบบจะแนะนำสถานที่ท่องเที่ยวและร้านอาหารระหว่างทางให้เพิ่มลงทริปได้ทันที หรือค้นหาชื่อสถานที่ด้านบนเพื่อเพิ่มเอง`}
+                    </p>
+                    {day.start && day.end && planner.allHitsCount > 0 && (
+                      <Button icon="auto_awesome" onClick={actions.autoFill}>
+                        เติมสถานที่แนะนำให้อัตโนมัติ
+                      </Button>
+                    )}
+                  </Card>
                 )}
-
-                <NearbyPanelCard dayNo={day.dayNo} hits={hits} radiusKm={radiusKm} onRadius={planner.setRadiusKm} onAdd={(h) => actions.addPlace(h.place, h.segment + 1)} />
+                <StopList
+                  stops={sched.stops}
+                  hits={hits}
+                  start={day.start}
+                  end={day.end}
+                  startLeg={sched.startLeg}
+                  departMin={trip.day_start_min}
+                  arriveMin={sched.arriveMin}
+                  onEditEndpoint={openEndpoint}
+                  onMove={actions.moveStop}
+                  onRemove={actions.removeStop}
+                  onAddNearby={(h, at) => actions.addPlace(h.place, at)}
+                />
+                <NearbyPanelCard dayNo={day.dayNo} hits={hits} radiusKm={radiusKm} onRadius={planner.setRadiusKm} filter={planner.nearbyFilter} onFilter={planner.setNearbyFilter} onAdd={(h) => actions.addPlace(h.place, h.segment + 1)} />
 
                 <Button href={summaryHref} iconAfter="arrow_forward" className="!h-12 w-full lg:hidden">
                   ดูสรุปเส้นทาง
@@ -120,6 +149,27 @@ export default function TripPlannerPage({ params }: { params: { id: string } }) 
               </>
             )}
           </PanelBody>
+          {day && ep && (
+            <EndpointDialog
+              kind={ep.kind}
+              dayNo={day.dayNo}
+              open={!ep.picking}
+              draft={ep.draft}
+              hasExisting={!!(ep.kind === 'start' ? day.start : day.end)}
+              places={places}
+              onChange={(draft) => setEp((cur) => cur && { ...cur, draft })}
+              onPickOnMap={() => setEp((cur) => cur && { ...cur, picking: true })}
+              onSave={(e) => {
+                actions.setEndpoints(ep.kind, e);
+                setEp(null);
+              }}
+              onClear={() => {
+                actions.setEndpoints(ep.kind, null);
+                setEp(null);
+              }}
+              onClose={() => setEp((cur) => (cur?.picking ? cur : null))}
+            />
+          )}
           {trip && (
             <TripSettingsDialog
               trip={trip}
@@ -136,11 +186,32 @@ export default function TripPlannerPage({ params }: { params: { id: string } }) 
       }
       map={
         <>
-          <MapView stops={stopPts} nearby={nearbyPts} routeLine={day?.route?.line} fitKey={fitKey} myLocation />
+          <MapView
+            stops={stopPts}
+            nearby={nearbyPts}
+            routeLine={day?.route?.line}
+            start={day?.start}
+            end={day?.end}
+            fitKey={fitKey}
+            myLocation
+            onPick={ep?.picking ? pickOnMap : undefined}
+          />
+          {ep?.picking && (
+            <div className="absolute left-1/2 top-3 z-[1000] flex -translate-x-1/2 items-center gap-2 rounded-input bg-brand-deep px-3.5 py-2 text-[13px] text-white shadow-dark">
+              แตะบนแผนที่เพื่อเลือก{KIND_LABEL[ep.kind]}
+              <button
+                type="button"
+                onClick={() => setEp((cur) => cur && { ...cur, picking: false })}
+                className="h-11 rounded-[8px] px-2 font-semibold underline focus-visible:outline-none focus-visible:shadow-focus md:h-8"
+              >
+                ยกเลิก
+              </button>
+            </div>
+          )}
           {day && (
             <>
-              <NearbyBar dayNo={day.dayNo} hits={hits} radiusKm={radiusKm} onRadius={planner.setRadiusKm} onAdd={(h) => actions.addPlace(h.place, h.segment + 1)} />
-              <DesktopRouteCard dayNo={day.dayNo} stops={sched.stops} travelMin={sched.travelMin} km={sched.km} summaryHref={summaryHref} />
+              <NearbyBar dayNo={day.dayNo} hits={hits} radiusKm={radiusKm} onRadius={planner.setRadiusKm} filter={planner.nearbyFilter} onFilter={planner.setNearbyFilter} onAdd={(h) => actions.addPlace(h.place, h.segment + 1)} />
+              <DesktopRouteCard dayNo={day.dayNo} stops={sched.stops} travelMin={sched.travelMin} km={sched.km} summaryHref={summaryHref} start={day.start} end={day.end} />
             </>
           )}
         </>

@@ -7,8 +7,10 @@ export interface RouteData {
   line: [number, number][];
   /** GeoJSON LineString ([lng, lat]) สำหรับเก็บลง trip_days.route_geom และ RPC places_near_route */
   geojson: { type: 'LineString'; coordinates: [number, number][] };
-  /** ช่วงจากจุด i ไปจุด i+1 */
+  /** ช่วงจากจุดแวะ i ไปจุดถัดไป (จุดแวะสุดท้าย → จุดส่ง ถ้ามีจุดส่ง) */
   legs: Leg[];
+  /** ช่วงจุดรับ → จุดแวะแรก (หรือ → จุดส่ง เมื่อยังไม่มีจุดแวะ); null = ไม่มีจุดรับ */
+  startLeg: Leg | null;
 }
 
 /** Google Routes รับจุดแวะกลางได้สูงสุด 25 → รวมต้นทาง/ปลายทางเป็น 27 จุด */
@@ -21,7 +23,7 @@ export function toLeg(km: number, driveMin: number): Leg {
 }
 
 /** เส้นทางตามถนนจริงจาก Google Routes (ต้องโหลด Maps JS API แล้ว และเปิดใช้ Routes API ในโปรเจกต์ Google Cloud) */
-export async function fetchRoute(points: LL[]): Promise<RouteData> {
+export async function fetchRoute(points: LL[], hasStart = false): Promise<RouteData> {
   if (points.length < 2) throw new Error('ต้องมีอย่างน้อย 2 จุด');
   if (points.length > MAX_ROUTE_POINTS) throw new Error('จุดแวะมากเกินกว่าที่ Google Routes รองรับต่อเส้นทาง');
   const { Route } = (await google.maps.importLibrary('routes')) as google.maps.RoutesLibrary;
@@ -35,9 +37,11 @@ export async function fetchRoute(points: LL[]): Promise<RouteData> {
   const route = routes?.[0];
   if (!route?.path?.length || route.legs?.length !== points.length - 1) throw new Error('ไม่พบเส้นทาง');
   const line = route.path.map((p) => [p.lat, p.lng] as [number, number]);
+  const all = route.legs.map((l) => toLeg((l.distanceMeters ?? 0) / 1000, (l.durationMillis ?? 0) / 60000));
   return {
     line,
     geojson: { type: 'LineString', coordinates: line.map(([lat, lng]) => [lng, lat] as [number, number]) },
-    legs: route.legs.map((l) => toLeg((l.distanceMeters ?? 0) / 1000, (l.durationMillis ?? 0) / 60000)),
+    startLeg: hasStart ? all[0] : null,
+    legs: hasStart ? all.slice(1) : all,
   };
 }

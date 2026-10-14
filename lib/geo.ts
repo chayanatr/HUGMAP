@@ -1,4 +1,4 @@
-import type { Leg, NearbyHit, Place, ScheduledStop } from './types';
+import type { Endpoint, Leg, NearbyHit, Place, ScheduledStop } from './types';
 
 type LL = { lat: number; lng: number };
 const rad = (d: number) => (d * Math.PI) / 180;
@@ -32,24 +32,47 @@ export function parseOpenHours(s?: string | null) {
   return m ? { open: +m[1] * 60 + +m[2], close: +m[3] * 60 + +m[4] } : null;
 }
 
-export function schedule(places: Place[], dayStartMin = 540, legs?: (Leg | null)[]) {
+/** จุดทั้งหมดของเส้นทางวัน: จุดรับ? → จุดแวะ → จุดส่ง? */
+export const routePoints = (start: Endpoint | null, stops: LL[], end: Endpoint | null): LL[] => [...(start ? [start] : []), ...stops, ...(end ? [end] : [])];
+
+export interface ScheduleEnds {
+  /** จุดรับ/ส่งของวัน และช่วงจุดรับ → จุดแวะแรกจาก Google Routes (ไม่มี = ใช้ค่าประมาณ) */
+  start?: LL | null;
+  end?: LL | null;
+  startLeg?: Leg | null;
+}
+
+/** dayStartMin = เวลาออกจากจุดรับ (ถ้ามีจุดรับ) ไม่เช่นนั้นคือเวลาถึงจุดแวะแรก; legs[i] = จุดแวะ i → ถัดไป (จุดสุดท้าย → จุดส่ง ถ้ามี) */
+export function schedule(places: Place[], dayStartMin = 540, legs?: (Leg | null)[], ends: ScheduleEnds = {}) {
   let t = dayStartMin, km = 0, travelMin = 0;
+  let startLeg: Leg | null = null;
+  if (ends.start && places[0]) {
+    startLeg = ends.startLeg ?? estimateLeg(ends.start, places[0]);
+  } else if (ends.start && ends.end && !places.length) {
+    startLeg = ends.startLeg ?? estimateLeg(ends.start, ends.end); // ไม่มีจุดแวะ: จุดรับ → จุดส่งตรงๆ
+  }
+  if (startLeg) { km += startLeg.km; travelMin += startLeg.min; t += startLeg.min; }
   const stops: ScheduledStop[] = places.map((p, i) => {
     const oh = parseOpenHours(p.open_hours);
     const waitMin = oh && t < oh.open ? oh.open - t : 0;
     const startMin = t + waitMin;
     const endMin = startMin + (p.duration_min || 30);
-    const next = places[i + 1];
+    const next = places[i + 1] ?? ends.end;
     const leg = next ? legs?.[i] ?? estimateLeg(p, next) : null;
     if (leg) { km += leg.km; travelMin += leg.min; }
     t = endMin + (leg?.min ?? 0);
     return { place: p, index: i, startMin, endMin, waitMin, closesBeforeEnd: !!oh && endMin > oh.close, leg };
   });
-  return { stops, km, travelMin, firstMin: stops[0]?.startMin ?? null, lastMin: stops.at(-1)?.endMin ?? null };
+  return {
+    stops, km, travelMin, startLeg,
+    firstMin: stops[0]?.startMin ?? null,
+    lastMin: stops.at(-1)?.endMin ?? null,
+    /** เวลาถึงจุดส่ง (null = ไม่มีจุดส่ง) */
+    arriveMin: ends.end ? t : null,
+  };
 }
-
-/** ฝั่ง client — production ใช้ RPC places_near_route กับ geometry จริง */
-export function nearbyAlongRoute(route: Place[], candidates: Place[], radiusKm: number, exclude: Set<string>): NearbyHit[] {
+/** ฝั่ง client — production ใช้ RPC places_near_route กับ geometry จริง; route = จุดรับ? + จุดแวะ + จุดส่ง? (segment ดิบตาม route นี้) */
+export function nearbyAlongRoute(route: LL[], candidates: Place[], radiusKm: number, exclude: Set<string>): NearbyHit[] {
   if (!route.length) return [];
   return candidates
     .filter((p) => !exclude.has(p.id))
@@ -63,6 +86,22 @@ export function nearbyAlongRoute(route: Place[], candidates: Place[], radiusKm: 
     .sort((a, b) => a.distanceKm - b.distanceKm);
 }
 
+/** แปลง segment ดิบ (ตามรายการจุดรับ+จุดแวะ+จุดส่ง) เป็น "แทรกหลังจุดแวะลำดับที่" + ข้อความช่วง (n = จำนวนจุดแวะ) */
+export function placeHit(h: NearbyHit, n: number, hasStart: boolean, hasEnd: boolean): NearbyHit {
+  const segment = h.segment - (hasStart ? 1 : 0);
+  if (n === 0) return { ...h, segment: -1, between: 'ระหว่างจุดรับ–จุดส่ง' };
+  if (!hasStart && !hasEnd && n < 2) return { ...h, segment: 0, between: 'ใกล้จุด 1' };
+  const from = segment < 0 ? 'จุดรับ' : `จุด ${segment + 1}`;
+  const to = segment + 1 >= n ? 'จุดส่ง' : `จุด ${segment + 2}`;
+  return { ...h, segment, between: `ช่วง${from}–${to}` };
+}
+
+/** ลำดับตามแนวเส้นทาง (0 = ต้นทาง): ใช้เรียงสถานที่แนะนำเป็นลำดับเดินทางเมื่อวันยังไม่มีจุดแวะ */
+export function alongRouteIndex(p: LL, line: LL[]) {
+  let best = Infinity, idx = 0;
+  line.forEach((q, i) => { const d = haversineKm(p, q); if (d < best) { best = d; idx = i; } });
+  return idx / Math.max(1, line.length - 1);
+}
 /** ช่วง (index ของจุดเริ่มช่วง) ที่ใกล้สถานที่ p ที่สุด — ใช้ป้าย "ช่วงจุด 2–3" และตำแหน่งแทรก */
 export function nearestSegment(p: LL, route: LL[]) {
   if (route.length < 2) return 0;

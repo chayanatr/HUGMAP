@@ -6,7 +6,7 @@ import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from
 import { CAT } from '@/lib/categories';
 import { cn } from '@/lib/cn';
 import { fixMessage, geoErrorMessage, getMyPosition, type Fix } from '@/lib/geolocation';
-import type { CategoryKey } from '@/lib/types';
+import type { CategoryKey, Endpoint } from '@/lib/types';
 import { Icon } from '@/components/ui/Icon';
 import { useToast } from '@/components/ui/Toast';
 
@@ -147,19 +147,25 @@ function MyLocation() {
 }
 
 export default function MapView({
-  theme = 'light', stops = [], places = [], nearby = [], routeLine, pin, fitKey = 'default', focus, myLocation = false, onSelect, onPick,
+  theme = 'light', stops = [], places = [], nearby = [], routeLine, start, end, pin, fitKey = 'default', focus, myLocation = false, onSelect, onPick,
 }: {
   theme?: 'light' | 'dark'; stops?: Pt[]; places?: Pt[]; nearby?: Pt[]; routeLine?: [number, number][];
+  /** จุดรับ/ส่งลูกค้าของวัน — วาดเป็นหมุดพิเศษและรวมในเส้นตรงสำรอง/การ fit */
+  start?: Endpoint | null; end?: Endpoint | null;
   pin?: LL | null; fitKey?: string; focus?: LL | null;
   /** แสดงปุ่ม "ตำแหน่งของฉัน" (GPS) — ใช้ในหน้าที่พนักงานใช้ (ไม่ใช้ในหน้าสรุป/ลิงก์ลูกค้า) */
   myLocation?: boolean;
   onSelect?: (id: string) => void; onPick?: (lat: number, lng: number) => void;
 }) {
   const line = useMemo<LL[]>(
-    () => (routeLine ?? stops.map((s) => [s.lat, s.lng] as [number, number])).map(([lat, lng]) => ({ lat, lng })),
-    [routeLine, stops],
+    () =>
+      routeLine
+        ? routeLine.map(([lat, lng]) => ({ lat, lng }))
+        : [...(start ? [start] : []), ...stops, ...(end ? [end] : [])].map(({ lat, lng }) => ({ lat, lng })),
+    [routeLine, stops, start, end],
   );
-  const fitPts: [number, number][] = stops.length ? stops.map((s) => [s.lat, s.lng]) : pin ? [[pin.lat, pin.lng]] : places.map((p) => [p.lat, p.lng]);
+  const routePts: [number, number][] = [...(start ? [start] : []), ...stops, ...(end ? [end] : [])].map((s) => [s.lat, s.lng]);
+  const fitPts: [number, number][] = routePts.length ? routePts : pin ? [[pin.lat, pin.lng]] : places.map((p) => [p.lat, p.lng]);
 
   if (!API_KEY) {
     return (
@@ -242,6 +248,21 @@ export default function MapView({
             </AdvancedMarker>
           );
         })}
+
+        {start && (
+          <AdvancedMarker position={start} title={`จุดรับ · ${start.name}`} anchorPoint={AdvancedMarkerAnchorPoint.CENTER} zIndex={1100}>
+            <Dot size={30} className="border-white bg-brand text-white" style={{ fontSize: 18 }}>
+              <Icon name="trip_origin" />
+            </Dot>
+          </AdvancedMarker>
+        )}
+        {end && (
+          <AdvancedMarker position={end} title={`จุดส่ง · ${end.name}`} anchorPoint={AdvancedMarkerAnchorPoint.CENTER} zIndex={1100}>
+            <Dot size={30} className="border-white bg-ink text-white" style={{ fontSize: 18 }}>
+              <Icon name="flag" />
+            </Dot>
+          </AdvancedMarker>
+        )}
 
         {pin && (
           <AdvancedMarker

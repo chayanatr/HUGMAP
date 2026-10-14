@@ -1,7 +1,7 @@
 import { fmtThaiRange } from './format';
-import { nearbyAlongRoute, nearestSegment, schedule } from './geo';
+import { nearbyAlongRoute, nearestSegment, placeHit, routePoints, schedule } from './geo';
 import type { DayData, TripData } from './trips';
-import type { Leg, NearbyHit, Place, ScheduledStop, Trip } from './types';
+import type { Endpoint, Leg, NearbyHit, Place, ScheduledStop, Trip } from './types';
 
 /** ข้อมูลหน้าสรุป — serializable (ส่งจาก server component ไป client ได้) */
 export interface SummaryDay {
@@ -10,6 +10,11 @@ export interface SummaryDay {
   places: Place[];
   /** ระยะ/เวลาแต่ละช่วงจาก Google Routes (null = ใช้ค่าประมาณ) */
   legs: Leg[] | null;
+  /** จุดรับ/ส่งลูกค้าของวัน */
+  start: Endpoint | null;
+  end: Endpoint | null;
+  /** ช่วงจุดรับ → จุดแวะแรก (null = ใช้ค่าประมาณ) */
+  startLeg: Leg | null;
   /** เส้นทางตามถนน [lat, lng] (null = ลากเส้นตรงระหว่างจุด) */
   line: [number, number][] | null;
   nearby: NearbyHit[];
@@ -41,17 +46,24 @@ export function buildSummaryData({
     const dayPlaces = d.placeIds.flatMap((id) => placeMap.get(id) ?? []);
     const complete = dayPlaces.length === d.placeIds.length;
     const road = roadHits[d.id];
-    const nearby: NearbyHit[] = !dayPlaces.length
+    const hasRoute = dayPlaces.length > 0 || (!!d.start && !!d.end);
+    const pts = routePoints(d.start, dayPlaces, d.end);
+    const n = dayPlaces.length;
+    const nearby: NearbyHit[] = !hasRoute
       ? []
       : road
         ? road.flatMap((h) => {
             const place = placeMap.get(h.id);
-            return place ? [{ place, distanceKm: h.distanceKm, segment: nearestSegment(place, dayPlaces) }] : [];
+            return place ? [placeHit({ place, distanceKm: h.distanceKm, segment: nearestSegment(place, pts) }, n, !!d.start, !!d.end)] : [];
           })
-        : nearbyAlongRoute(dayPlaces, places, radiusKm, inTrip);
-    return { id: d.id, dayNo: d.dayNo, places: dayPlaces, legs: complete ? (d.route?.legs ?? null) : null, line: d.route?.line ?? null, nearby };
-  });
-  return { trip: tripData.trip, radiusKm, days };
+        : nearbyAlongRoute(pts, places, radiusKm, inTrip).map((h) => placeHit(h, n, !!d.start, !!d.end));
+    return {
+      id: d.id, dayNo: d.dayNo, places: dayPlaces, start: d.start, end: d.end,
+      startLeg: complete ? (d.route?.startLeg ?? null) : null,
+      legs: complete ? (d.route?.legs ?? null) : null,
+      line: d.route?.line ?? null, nearby,
+    };
+  });  return { trip: tripData.trip, radiusKm, days };
 }
 
 export interface DayView extends SummaryDay {
@@ -60,13 +72,15 @@ export interface DayView extends SummaryDay {
   travelMin: number;
   firstMin: number | null;
   lastMin: number | null;
+  /** เวลาถึงจุดส่ง (null = ไม่มีจุดส่ง) */
+  arriveMin: number | null;
 }
 
 /** คำนวณตารางเวลารายวันและยอดรวม */
 export function summarize(data: SummaryData) {
   const days: DayView[] = data.days.map((d) => {
-    const s = schedule(d.places, data.trip.day_start_min, d.legs ?? undefined);
-    return { ...d, stops: s.stops, km: s.km, travelMin: s.travelMin, firstMin: s.firstMin, lastMin: s.lastMin };
+    const s = schedule(d.places, data.trip.day_start_min, d.legs ?? undefined, { start: d.start, end: d.end, startLeg: d.startLeg });
+    return { ...d, stops: s.stops, km: s.km, travelMin: s.travelMin, firstMin: s.firstMin, lastMin: s.lastMin, startLeg: s.startLeg, arriveMin: s.arriveMin };
   });
   return {
     days,
