@@ -35,6 +35,12 @@ export default function PlacesPage() {
   const [picked, setPicked] = useState<PickedPoint | null>(null);
   const [target, setTarget] = useState<{ lat: number; lng: number; zoom: number; key: number } | null>(null);
   const pickSeq = useRef(0);
+  // สั่งช่องค้นหาบนแผนที่ (Google) จากช่องค้นหาในรายการ
+  const [searchRequest, setSearchRequest] = useState<{ text: string; key: number } | null>(null);
+  const searchOnGoogle = (text: string) => {
+    setSearchRequest({ text, key: Date.now() });
+    if (window.matchMedia('(max-width: 639px)').matches) document.querySelector('main')?.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   const pickPoint = (lat: number, lng: number, placeId?: string) => {
     const seq = ++pickSeq.current;
@@ -86,6 +92,16 @@ export default function PlacesPage() {
           </PanelHeader>
           <PanelBody>
             <PlaceFilters city={city} cats={cats} count={filtered.length} onCity={setCity} onCats={setCats} />
+            {q.trim().length >= 2 && process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY && (
+              <button
+                type="button"
+                onClick={() => searchOnGoogle(q.trim())}
+                className="flex min-h-[44px] w-full items-center gap-2 rounded-input border border-line-border bg-surface px-3.5 text-left text-[14px] text-brand-hover hover:bg-bg focus-visible:outline-none focus-visible:shadow-focus"
+              >
+                <Icon name="travel_explore" className="shrink-0 text-[20px]" />
+                <span className="min-w-0 flex-1 truncate">ค้นหา “{q.trim()}” บนแผนที่ (Google)</span>
+              </button>
+            )}
             {status === 'loading' && <Card className="p-4 text-[14px] text-muted">กำลังโหลดสถานที่…</Card>}
             {status === 'error' && (
               <Card className="flex flex-col items-start gap-3 p-4">
@@ -121,6 +137,7 @@ export default function PlacesPage() {
           />
           <MapSearch
             places={places}
+            request={searchRequest}
             className="absolute left-3 top-3 z-[1000] w-[calc(100%-4.75rem)] md:w-[360px]"
             onSelectSaved={(p) => {
               setPicked(null);

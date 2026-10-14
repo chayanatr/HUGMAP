@@ -16,17 +16,21 @@ export function MapSearch({
   places = [],
   onSelectSaved,
   onPickGoogle,
+  request,
   className,
 }: {
   /** สถานที่ในระบบที่ค้นหาได้ในช่องเดียวกัน (ไม่ส่ง = ค้นเฉพาะ Google) */
   places?: Place[];
   onSelectSaved?: (place: Place) => void;
   onPickGoogle: (loc: PickedLocation) => void;
+  /** สั่งค้นจากภายนอก (เช่น ปุ่มค้นหาบน Google ในรายการสถานที่): ใส่ข้อความ เปิดรายการผล และโฟกัสช่อง; key เปลี่ยนเพื่อสั่งซ้ำ */
+  request?: { text: string; key: number } | null;
   className?: string;
 }) {
   const ready = useGoogleReady();
   const listId = useId();
   const box = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const token = useRef<google.maps.places.AutocompleteSessionToken | null>(null);
   const [q, setQ] = useState('');
   const [open, setOpen] = useState(false);
@@ -68,6 +72,13 @@ export function MapSearch({
   }, [needle, active, ready]);
 
   useEffect(() => {
+    if (!request) return;
+    setQ(request.text);
+    setOpen(true);
+    inputRef.current?.focus();
+  }, [request]);
+
+  useEffect(() => {
     const close = (e: PointerEvent) => !box.current?.contains(e.target as Node) && setOpen(false);
     document.addEventListener('pointerdown', close);
     return () => document.removeEventListener('pointerdown', close);
@@ -105,6 +116,7 @@ export function MapSearch({
       <div className="flex items-center gap-2 rounded-input bg-surface px-3 shadow-overlay">
         <Icon name="search" className="text-[20px] text-label" />
         <input
+          ref={inputRef}
           type="search"
           role="combobox"
           aria-label="ค้นหาชื่อสถานที่บนแผนที่"
