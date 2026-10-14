@@ -5,7 +5,7 @@ import { CategoryTile } from '@/components/places/PlaceCard';
 import { LazyMap } from '@/components/summary/LazyMap';
 import { Button } from '@/components/ui/Button';
 import { Icon } from '@/components/ui/Icon';
-import { CAT } from '@/lib/categories';
+import { useCategories } from '@/components/CategoriesProvider';
 import { cn } from '@/lib/cn';
 import { fmtThaiDate } from '@/lib/format';
 import { fmtClock, fmtDuration, fmtKm } from '@/lib/geo';
@@ -115,6 +115,7 @@ function DaySection({
   staff: boolean;
   onAdd?: (dayId: string, hit: NearbyHit, atIndex: number) => void;
 }) {
+  const { cat } = useCategories();
   const stopPts = useMemo(() => day.places.map((p) => ({ id: p.id, lat: p.lat, lng: p.lng, name: p.name, category: p.category })), [day.places]);
   const nearbyPts = useMemo(() => day.nearby.map((h) => ({ id: h.place.id, lat: h.place.lat, lng: h.place.lng, name: h.place.name, category: h.place.category })), [day.nearby]);
   const from = day.start ? dayStartMin : day.firstMin;
@@ -175,7 +176,7 @@ function DaySection({
                   <div className="min-w-0 pb-3.5">
                     <div className="text-title">{st.place.name}</div>
                     <div className="text-[12px] leading-[1.6] text-placeholder">
-                      {CAT[st.place.category].label} · {fmtDuration(st.place.duration_min)}
+                      {cat(st.place.category).label} · {fmtDuration(st.place.duration_min)}
                       {st.place.fee ? ` · ${st.place.fee}` : ''}
                     </div>
                     {st.leg && (

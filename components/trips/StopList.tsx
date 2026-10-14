@@ -14,7 +14,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { Fragment } from 'react';
 import { Icon } from '@/components/ui/Icon';
 import { Pill } from '@/components/ui/Pill';
-import { CAT } from '@/lib/categories';
+import { useCategories } from '@/components/CategoriesProvider';
 import { cn } from '@/lib/cn';
 import { fmtClock, fmtDuration, fmtKm, parseOpenHours } from '@/lib/geo';
 import { KIND_LABEL, type EndpointKind } from '@/components/trips/EndpointDialog';
@@ -91,7 +91,7 @@ export function StopList({
 function SortableStop({ stop, total, onRemove, onMoveUp }: { stop: ScheduledStop; total: number; onRemove: () => void; onMoveUp: () => void }) {
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging, isOver } = useSortable({ id: stop.place.id });
   const { place, index } = stop;
-  const c = CAT[place.category];
+  const c = useCategories().cat(place.category);
   const ends = index === 0 || index === total - 1;
   const close = parseOpenHours(place.open_hours)?.close;
 

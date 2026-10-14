@@ -3,13 +3,14 @@ import type { ReactNode } from 'react';
 import { Button } from '@/components/ui/Button';
 import { DarkCard } from '@/components/ui/Card';
 import { Icon } from '@/components/ui/Icon';
-import { CAT, CITY_LABEL } from '@/lib/categories';
+import { useCategories } from '@/components/CategoriesProvider';
+import { CITY_LABEL } from '@/lib/categories';
 import { fmtDuration } from '@/lib/geo';
 import type { Place } from '@/lib/types';
 
 /** การ์ดลอยเขียวเข้มมุมขวาล่างของแผนที่ (mobile เต็มกว้าง) */
 export function PlaceDetailCard({ place, onClose, canEdit, tripAction }: { place: Place; onClose: () => void; canEdit?: boolean; tripAction?: ReactNode }) {
-  const c = CAT[place.category];
+  const c = useCategories().cat(place.category);
   const info = [
     place.open_hours ? `เปิด ${place.open_hours}` : 'ไม่ระบุเวลาเปิด',
     place.fee ? `ค่าเข้า ${place.fee}` : '',

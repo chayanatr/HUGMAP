@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { NEARBY_FILTERS, type NearbyFilterKey } from './categories';
+import { NEARBY_FILTERS, matchesNearbyFilter, type NearbyFilterKey } from './categories';
 import { alongRouteIndex, autoOrder, haversineKm, nearbyAlongRoute, nearestSegment, placeHit, routePoints, schedule } from './geo';
 import { ensureDayRoute } from './dayRoutes';
 import { fetchRoute } from './routes';
@@ -152,10 +152,7 @@ export function useTripPlanner(tripId: string, places: Place[], notify: (message
     return nearbyAlongRoute(pts, places, radiusKm, inTripIds).map((h) => placeHit(h, n, !!start, !!end));
   }, [roadHits, placesReady, routeable, start, end, dayPlaces, places, placeMap, radiusKm, inTripIds]);
 
-  const hits = useMemo(() => {
-    const cats = NEARBY_FILTERS.find((f) => f.key === nearbyFilter)?.cats;
-    return cats ? allHits.filter((h) => cats.includes(h.place.category)) : allHits;
-  }, [allHits, nearbyFilter]);
+  const hits = useMemo(() => allHits.filter((h) => matchesNearbyFilter(nearbyFilter, h.place.category)), [allHits, nearbyFilter]);
 
   // ---- แก้ไขลำดับ (optimistic แล้วบันทึกทั้งวันด้วย RPC reorder_day) ----
   const setIds = useCallback(

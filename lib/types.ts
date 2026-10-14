@@ -1,4 +1,5 @@
-export type CategoryKey = 'temple' | 'cafe' | 'food' | 'stay' | 'nature' | 'market' | 'view' | 'museum' | 'gift';
+/** key ของหมวดในตาราง place_categories (หมวดเริ่มต้น: temple, cafe, food, stay, nature, market, view, museum, gift + หมวดที่ผู้ดูแลเพิ่ม) */
+export type CategoryKey = string;
 export type CityKey = 'lp' | 'vte' | 'vv' | 'pakse' | 'other';
 
 export interface Place {
