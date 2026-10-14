@@ -26,6 +26,13 @@ export interface Trip {
   share_token: string | null;
 }
 
+/** จุดรับ/ส่งลูกค้าของวัน — ชื่อ + พิกัดอิสระ (ไม่ต้องอยู่ใน places) */
+export interface Endpoint {
+  name: string;
+  lat: number;
+  lng: number;
+}
+
 export interface ScheduledStop {
   place: Place;
   index: number;
@@ -36,4 +43,5 @@ export interface ScheduledStop {
   leg: Leg | null;
 }
 export interface Leg { km: number; min: number; walk: boolean }
-export interface NearbyHit { place: Place; distanceKm: number; segment: number }
+/** segment = แทรกหลังจุดแวะลำดับนี้ (-1 = ก่อนจุดแรก); between = ข้อความ "ช่วงจุดรับ–จุด 1" */
+export interface NearbyHit { place: Place; distanceKm: number; segment: number; between?: string }

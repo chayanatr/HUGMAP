@@ -92,7 +92,7 @@ export function SummaryView({
       </header>
 
       {s.days.map((d) => (
-        <DaySection key={d.id} day={d} startDate={trip.start_date} radiusKm={data.radiusKm} staff={staff} onAdd={onAddNearby} />
+        <DaySection key={d.id} day={d} startDate={trip.start_date} dayStartMin={trip.day_start_min} radiusKm={data.radiusKm} staff={staff} onAdd={onAddNearby} />
       ))}
 
       <p className="text-[12px] leading-[1.6] text-placeholder">เวลาเดินทางเป็นค่าประมาณ อาจเปลี่ยนตามสภาพถนนและการจราจร · แผนที่ © Google</p>
@@ -103,19 +103,23 @@ export function SummaryView({
 function DaySection({
   day,
   startDate,
+  dayStartMin,
   radiusKm,
   staff,
   onAdd,
 }: {
   day: DayView;
   startDate: string;
+  dayStartMin: number;
   radiusKm: number;
   staff: boolean;
   onAdd?: (dayId: string, hit: NearbyHit, atIndex: number) => void;
 }) {
   const stopPts = useMemo(() => day.places.map((p) => ({ id: p.id, lat: p.lat, lng: p.lng, name: p.name, category: p.category })), [day.places]);
   const nearbyPts = useMemo(() => day.nearby.map((h) => ({ id: h.place.id, lat: h.place.lat, lng: h.place.lng, name: h.place.name, category: h.place.category })), [day.nearby]);
-  const span = day.firstMin != null && day.lastMin != null ? `${fmtClock(day.firstMin)}–${fmtClock(day.lastMin)}` : '';
+  const from = day.start ? dayStartMin : day.firstMin;
+  const to = day.arriveMin ?? day.lastMin;
+  const span = from != null && to != null ? `${fmtClock(from)}–${fmtClock(to)}` : '';
   const radiusLabel = radiusKm < 1 ? `${radiusKm * 1000} ม.` : `${radiusKm} กม.`;
 
   return (
@@ -127,20 +131,41 @@ function DaySection({
           {span && ` · ${span}`}
         </span>
         <span className="text-[13px] text-muted md:ml-auto">
-          {day.stops.length} จุด · {fmtKm(day.km)} · เดินทาง {fmtDuration(day.travelMin)}
+          {day.stops.length} จุดแวะ · {fmtKm(day.km)} · เดินทาง {fmtDuration(day.travelMin)}
         </span>
       </div>
 
-      {day.stops.length === 0 ? (
+      {day.stops.length === 0 && !(day.start && day.end) ? (
         <p className="rounded-item bg-panel px-4 py-3 text-[14px] text-muted">ยังไม่มีจุดแวะในวันนี้</p>
       ) : (
         <div className="grid items-start gap-4 lg:grid-cols-[1.1fr_1fr]">
           <div className="relative h-[260px] overflow-hidden rounded-[14px] bg-map md:h-[380px]">
-            <LazyMap stops={stopPts} nearby={nearbyPts} routeLine={day.line} fitKey={day.id} />
+            <LazyMap stops={stopPts} nearby={nearbyPts} routeLine={day.line} start={day.start} end={day.end} fitKey={day.id} />
           </div>
           <ol className="flex flex-col">
+            {day.start && (
+              <li className="grid grid-cols-[26px_minmax(0,1fr)_auto] items-start gap-3">
+                <div className="flex flex-col items-center self-stretch">
+                  <div className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-brand text-white">
+                    <Icon name="trip_origin" className="text-[15px]" />
+                  </div>
+                  <div className="flex-1 border-l-[1.5px] border-dashed border-line-dash" />
+                </div>
+                <div className="min-w-0 pb-3.5">
+                  <div className="text-title">{day.start.name}</div>
+                  <div className="text-[12px] leading-[1.6] text-placeholder">จุดรับลูกค้า</div>
+                  {day.startLeg && (
+                    <div className="mt-1 flex items-center gap-1 text-[12px] text-muted">
+                      <Icon name={day.startLeg.walk ? 'directions_walk' : 'directions_car'} className="text-[15px] text-brand" />
+                      {fmtKm(day.startLeg.km)} · {day.startLeg.walk ? 'เดิน' : 'รถ'} {fmtDuration(day.startLeg.min)}
+                    </div>
+                  )}
+                </div>
+                <div className="pt-0.5 text-[14px] font-semibold tabular-nums">{fmtClock(dayStartMin)}</div>
+              </li>
+            )}
             {day.stops.map((st, i) => {
-              const last = i === day.stops.length - 1;
+              const last = i === day.stops.length - 1 && !day.end;
               return (
                 <li key={st.place.id} className="grid grid-cols-[26px_minmax(0,1fr)_auto] items-start gap-3">
                   <div className="flex flex-col items-center self-stretch">
@@ -164,6 +189,20 @@ function DaySection({
                 </li>
               );
             })}
+            {day.end && (
+              <li className="grid grid-cols-[26px_minmax(0,1fr)_auto] items-start gap-3">
+                <div className="flex flex-col items-center self-stretch">
+                  <div className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-ink text-white">
+                    <Icon name="flag" className="text-[15px]" />
+                  </div>
+                </div>
+                <div className="min-w-0">
+                  <div className="text-title">{day.end.name}</div>
+                  <div className="text-[12px] leading-[1.6] text-placeholder">จุดส่งลูกค้า</div>
+                </div>
+                <div className="pt-0.5 text-[14px] font-semibold tabular-nums">{day.arriveMin != null ? fmtClock(day.arriveMin) : ''}</div>
+              </li>
+            )}
           </ol>
         </div>
       )}
@@ -181,7 +220,7 @@ function DaySection({
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-[13px] font-semibold">{h.place.name}</div>
                   <div className="text-label">
-                    ห่าง {fmtKm(h.distanceKm)} · ช่วงจุด {h.segment + 1}–{h.segment + 2}
+                    ห่าง {fmtKm(h.distanceKm)} · {h.between ?? `ช่วงจุด ${h.segment + 1}–${h.segment + 2}`}
                   </div>
                 </div>
                 {staff && onAdd && (

@@ -1,6 +1,7 @@
 'use client';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { autoOrder, haversineKm, nearbyAlongRoute, nearestSegment, schedule } from './geo';
+import { NEARBY_FILTERS, type NearbyFilterKey } from './categories';
+import { alongRouteIndex, autoOrder, haversineKm, nearbyAlongRoute, nearestSegment, placeHit, routePoints, schedule } from './geo';
 import { ensureDayRoute } from './dayRoutes';
 import { fetchRoute } from './routes';
 import { placesNearRoute } from './supabase';
@@ -8,16 +9,18 @@ import { getSavedDay, saveDay } from './currentDay';
 import { useGoogleReady } from './useGoogleReady';
 import {
   addDay as addDayRow,
+  canRoute,
   deleteDay as deleteDayRow,
   ensureShareToken,
   fetchTrip,
   reorderDay,
   revokeShareToken,
   saveDayRoute,
+  setDayEndpoints,
   updateTrip as updateTripRow,
   type DayData,
 } from './trips';
-import type { NearbyHit, Place, Trip } from './types';
+import type { Endpoint, NearbyHit, Place, Trip } from './types';
 
 export type TripStatus = 'loading' | 'ready' | 'missing' | 'error';
 
@@ -29,6 +32,7 @@ export function useTripPlanner(tripId: string, places: Place[], notify: (message
   const [days, setDays] = useState<DayData[]>([]);
   const [dayIdx, setDayIdx] = useState(0);
   const [radiusKm, setRadiusKm] = useState(1);
+  const [nearbyFilter, setNearbyFilter] = useState<NearbyFilterKey>('all');
   const [routeLoading, setRouteLoading] = useState(false);
   const [roadHits, setRoadHits] = useState<{ id: string; distanceKm: number }[] | null>(null);
   const googleReady = useGoogleReady();
@@ -76,23 +80,35 @@ export function useTripPlanner(tripId: string, places: Place[], notify: (message
   const inTripIds = useMemo(() => new Set(days.flatMap((d) => d.placeIds)), [days]);
   const inTripKey = [...inTripIds].sort().join(',');
 
+  const start = day?.start ?? null;
+  const end = day?.end ?? null;
+  const endsKey = `${start ? `${start.lat},${start.lng}` : ''}|${end ? `${end.lat},${end.lng}` : ''}`;
+  const routeable = !!day && canRoute(day.placeIds.length, start, end);
+
   const sched = useMemo(
-    () => schedule(dayPlaces, trip?.day_start_min ?? 540, placesReady ? day?.route?.legs : undefined),
-    [dayPlaces, trip?.day_start_min, placesReady, day?.route],
+    () =>
+      schedule(dayPlaces, trip?.day_start_min ?? 540, placesReady ? day?.route?.legs : undefined, {
+        start,
+        end,
+        startLeg: placesReady ? day?.route?.startLeg : null,
+      }),
+    [dayPlaces, trip?.day_start_min, placesReady, day?.route, start, end],
   );
 
-  // ---- เส้นทางตามถนนจริง (cache ใน DB; คำนวณใหม่เมื่อลำดับเปลี่ยน) ----
+  // ---- เส้นทางตามถนนจริง (cache ใน DB; คำนวณใหม่เมื่อลำดับหรือจุดรับ/ส่งเปลี่ยน) ----
   useEffect(() => {
-    if (!day || !googleReady || !placesReady || day.route || day.placeIds.length < 2) return;
-    const key = `${day.id}:${dayKey}`;
+    if (!day || !googleReady || !placesReady || day.route || !routeable) return;
+    const key = `${day.id}:${dayKey}:${endsKey}`;
     if (failedRoute.current === key) return;
     let cancelled = false;
     setRouteLoading(true);
     const timer = setTimeout(async () => {
       try {
-        const route = await fetchRoute(dayPlaces);
+        const route = await fetchRoute(routePoints(start, dayPlaces, end), !!start);
         if (cancelled) return;
-        setDays((prev) => prev.map((d) => (d.id === day.id && d.placeIds.join(',') === dayKey ? { ...d, route } : d)));
+        setDays((prev) =>
+          prev.map((d) => (d.id === day.id && d.placeIds.join(',') === dayKey && `${d.start ? `${d.start.lat},${d.start.lng}` : ''}|${d.end ? `${d.end.lat},${d.end.lng}` : ''}` === endsKey ? { ...d, route } : d)),
+        );
         await enqueue(day.id, () => saveDayRoute(day.id, day.placeIds, route));
       } catch {
         failedRoute.current = key; // ใช้ค่าประมาณ ไม่ลองซ้ำจนกว่าลำดับจะเปลี่ยน
@@ -106,7 +122,7 @@ export function useTripPlanner(tripId: string, places: Place[], notify: (message
       setRouteLoading(false);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [day?.id, dayKey, day?.route, googleReady, placesReady]);
+  }, [day?.id, dayKey, endsKey, day?.route, googleReady, placesReady]);
 
   // ---- สถานที่ใกล้เส้นทาง: RPC (PostGIS) กับเส้นทางจริง; ไม่มีเส้นทางจริง = คำนวณฝั่ง client จากเส้นตรง ----
   const routeGeo = day?.route?.geojson;
@@ -122,16 +138,24 @@ export function useTripPlanner(tripId: string, places: Place[], notify: (message
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [routeGeo, radiusKm, inTripKey]);
 
-  const hits: NearbyHit[] = useMemo(() => {
-    if (!placesReady || !dayPlaces.length) return [];
+  // ทุกหมวด (ใช้ "เติมสถานที่แนะนำให้อัตโนมัติ") — hits คือผลที่กรองหมวดแล้วสำหรับแสดง
+  const allHits: NearbyHit[] = useMemo(() => {
+    if (!placesReady || !routeable) return [];
+    const pts = routePoints(start, dayPlaces, end);
+    const n = dayPlaces.length;
     if (roadHits) {
       return roadHits.flatMap((h) => {
         const place = placeMap.get(h.id);
-        return place ? [{ place, distanceKm: h.distanceKm, segment: nearestSegment(place, dayPlaces) }] : [];
+        return place ? [placeHit({ place, distanceKm: h.distanceKm, segment: nearestSegment(place, pts) }, n, !!start, !!end)] : [];
       });
     }
-    return nearbyAlongRoute(dayPlaces, places, radiusKm, inTripIds);
-  }, [roadHits, placesReady, dayPlaces, places, placeMap, radiusKm, inTripIds]);
+    return nearbyAlongRoute(pts, places, radiusKm, inTripIds).map((h) => placeHit(h, n, !!start, !!end));
+  }, [roadHits, placesReady, routeable, start, end, dayPlaces, places, placeMap, radiusKm, inTripIds]);
+
+  const hits = useMemo(() => {
+    const cats = NEARBY_FILTERS.find((f) => f.key === nearbyFilter)?.cats;
+    return cats ? allHits.filter((h) => cats.includes(h.place.category)) : allHits;
+  }, [allHits, nearbyFilter]);
 
   // ---- แก้ไขลำดับ (optimistic แล้วบันทึกทั้งวันด้วย RPC reorder_day) ----
   const setIds = useCallback(
@@ -185,13 +209,46 @@ export function useTripPlanner(tripId: string, places: Place[], notify: (message
     notify(saved > 0.05 ? `จัดลำดับแล้ว · ลดระยะทาง (เส้นตรง) ลง ${saved.toFixed(1)} กม.` : 'จัดลำดับแล้ว · ลำดับเดิมดีอยู่แล้ว');
   }, [day, dayPlaces, dayIdx, setIds, notify]);
 
+  // ---- จุดรับ/ส่งลูกค้า (รายวัน) ----
+  const setEndpoints = useCallback(
+    (which: 'start' | 'end', value: Endpoint | null) => {
+      const target = days[dayIdx];
+      if (!target) return;
+      const next = { start: which === 'start' ? value : target.start, end: which === 'end' ? value : target.end };
+      setDays((prev) => prev.map((d, i) => (i === dayIdx ? { ...d, ...next, route: null } : d)));
+      enqueue(target.id, () => setDayEndpoints(target.id, next.start, next.end)).catch(() => {
+        notify('บันทึกจุดรับ/ส่งไม่สำเร็จ กรุณาลองอีกครั้ง');
+        load();
+      });
+      notify(value ? `ตั้ง${which === 'start' ? 'จุดรับ' : 'จุดส่ง'}: ${value.name}` : `ลบ${which === 'start' ? 'จุดรับ' : 'จุดส่ง'}แล้ว`);
+    },
+    [days, dayIdx, enqueue, notify, load],
+  );
+
+  /** วันที่ยังไม่มีจุดแวะ: เลือกสถานที่ระหว่างจุดรับ-ส่งให้อัตโนมัติ (ท่องเที่ยวใกล้เส้นทางที่สุด + ร้านอาหาร 1 แห่ง) เรียงตามแนวทาง */
+  const autoFill = useCallback(() => {
+    if (!day || day.placeIds.length > 0 || !routeable) return;
+    const eatCats = NEARBY_FILTERS.find((f) => f.key === 'eat')!.cats!;
+    const pool = allHits.filter((h) => h.place.category !== 'stay');
+    const eat = pool.filter((h) => eatCats.includes(h.place.category)).slice(0, 1);
+    const sights = pool.filter((h) => !eatCats.includes(h.place.category)).slice(0, 4);
+    const picked = [...sights, ...eat];
+    if (!picked.length) return notify('ไม่พบสถานที่ใกล้เส้นทาง ลองขยายรัศมีค้นหา');
+    const line: { lat: number; lng: number }[] = day.route ? day.route.line.map(([lat, lng]) => ({ lat, lng })) : routePoints(start, [], end);
+    const ordered = picked.map((h) => h.place).sort((a, b) => alongRouteIndex(a, line) - alongRouteIndex(b, line));
+    setIds(dayIdx, ordered.map((p) => p.id));
+    notify(`เพิ่มสถานที่แนะนำ ${ordered.length} แห่งในวันที่ ${day.dayNo}`);
+  }, [day, routeable, allHits, start, end, dayIdx, setIds, notify]);
+
   // ---- วัน ----
   const addNewDay = useCallback(async () => {
     if (!trip) return;
     try {
       const dayNo = Math.max(0, ...days.map((d) => d.dayNo)) + 1;
-      const id = await addDayRow(trip.id, dayNo);
-      setDays((prev) => [...prev, { id, dayNo, placeIds: [], route: null }]);
+      // วันใหม่เริ่มจากจุดส่งของวันก่อนหน้า (เช่น เช้าวันถัดไปรับที่โรงแรมเดิม)
+      const startFrom = days.at(-1)?.end ?? null;
+      const id = await addDayRow(trip.id, dayNo, startFrom);
+      setDays((prev) => [...prev, { id, dayNo, placeIds: [], start: startFrom, end: null, route: null }]);
       setDayIdx(days.length);
     } catch {
       notify('เพิ่มวันไม่สำเร็จ กรุณาลองอีกครั้ง');
@@ -236,7 +293,7 @@ export function useTripPlanner(tripId: string, places: Place[], notify: (message
       if (googleReady) {
         await Promise.all(
           days
-            .filter((d) => !d.route && d.placeIds.length > 1)
+            .filter((d) => !d.route && canRoute(d.placeIds.length, d.start, d.end))
             .map((d) =>
               ensureDayRoute(d, placeMap)
                 .then((route) => route && setDays((prev) => prev.map((x) => (x.id === d.id && x.placeIds.join(',') === d.placeIds.join(',') ? { ...x, route } : x))))
@@ -287,6 +344,9 @@ export function useTripPlanner(tripId: string, places: Place[], notify: (message
     radiusKm,
     setRadiusKm,
     hits,
-    actions: { addPlace, removeStop, moveStop, autoOrder: runAutoOrder, addDay: addNewDay, deleteDay: removeDay, updateTrip, shareLink, revokeShareLink },
+    allHitsCount: allHits.length,
+    nearbyFilter,
+    setNearbyFilter,
+    actions: { setEndpoints, autoFill, addPlace, removeStop, moveStop, autoOrder: runAutoOrder, addDay: addNewDay, deleteDay: removeDay, updateTrip, shareLink, revokeShareLink },
   };
 }

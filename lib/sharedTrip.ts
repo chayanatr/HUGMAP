@@ -1,8 +1,8 @@
-import { nearestSegment } from './geo';
+import { nearestSegment, placeHit, routePoints } from './geo';
 import { toLeg } from './routes';
 import type { SummaryData, SummaryDay } from './summary';
 import { serverSupabase } from './supabaseServer';
-import type { Place, Trip } from './types';
+import type { Endpoint, Place, Trip } from './types';
 
 const SHARE_RADIUS_KM = 1;
 const TOKEN_FORMAT = /^[0-9a-f]{32}$/i;
@@ -11,6 +11,10 @@ interface SharedDay {
   id: string;
   day_no: number;
   route: { type: 'LineString'; coordinates: [number, number][] } | null;
+  start: Endpoint | null;
+  end: Endpoint | null;
+  start_leg_km: number | null;
+  start_leg_min: number | null;
   stops: { place: Place; leg_km: number | null; leg_min: number | null }[];
   nearby: { place: Place; distance_m: number }[];
 }
@@ -29,16 +33,25 @@ export async function fetchSharedSummary(token: string): Promise<SummaryData | n
 
   const days = raw.days.map((d): SummaryDay => {
     const places = d.stops.map((s) => s.place);
-    const legRows = d.stops.slice(0, -1);
-    const cached = d.route && legRows.length > 0 && legRows.every((s) => s.leg_km != null && s.leg_min != null);
+    const start = d.start ?? null;
+    const end = d.end ?? null;
+    const legRows = end ? d.stops : d.stops.slice(0, -1);
+    const startLegOk = !start || (d.start_leg_km != null && d.start_leg_min != null);
+    const routeable = places.length > 0 ? places.length + (start ? 1 : 0) + (end ? 1 : 0) > 1 : !!start && !!end;
+    const cached = d.route && routeable && startLegOk && legRows.every((s) => s.leg_km != null && s.leg_min != null);
+    const pts = routePoints(start, places, end);
     return {
       id: d.id,
       dayNo: d.day_no,
       places,
+      start,
+      end,
+      startLeg: cached && start ? toLeg(Number(d.start_leg_km), Number(d.start_leg_min)) : null,
       legs: cached ? legRows.map((s) => toLeg(Number(s.leg_km), Number(s.leg_min))) : null,
       line: d.route ? d.route.coordinates.map(([lng, lat]) => [lat, lng] as [number, number]) : null,
-      nearby: d.nearby.map((n) => ({ place: n.place, distanceKm: n.distance_m / 1000, segment: nearestSegment(n.place, places) })),
+      nearby: d.nearby.map((n) =>
+        placeHit({ place: n.place, distanceKm: n.distance_m / 1000, segment: nearestSegment(n.place, pts) }, places.length, !!start, !!end),
+      ),
     };
-  });
-  return { trip: { ...raw.trip, share_token: null }, radiusKm: SHARE_RADIUS_KM, days };
+  });  return { trip: { ...raw.trip, share_token: null }, radiusKm: SHARE_RADIUS_KM, days };
 }

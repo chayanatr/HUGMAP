@@ -7,13 +7,14 @@ import { fmtThaiDate, splitUnit } from '@/lib/format';
 import type { DayData } from '@/lib/trips';
 import type { ScheduledStop, Trip } from '@/lib/types';
 
-type Sched = { stops: ScheduledStop[]; km: number; travelMin: number; firstMin: number | null; lastMin: number | null };
+type Sched = { stops: ScheduledStop[]; km: number; travelMin: number; firstMin: number | null; lastMin: number | null; arriveMin: number | null };
 
 export function TripCard({
   trip,
   days,
   dayIdx,
   sched,
+  hasStart,
   isRoad,
   routeLoading,
   onSelectDay,
@@ -25,6 +26,8 @@ export function TripCard({
   days: DayData[];
   dayIdx: number;
   sched: Sched;
+  /** มีจุดรับ → เวลาเริ่มคือเวลาออกจากจุดรับ ไม่ใช่เวลาถึงจุดแวะแรก */
+  hasStart: boolean;
   isRoad: boolean;
   routeLoading: boolean;
   onSelectDay: (i: number) => void;
@@ -33,7 +36,7 @@ export function TripCard({
   onEdit: () => void;
 }) {
   const [kmNum, kmUnit] = splitUnit(fmtKm(sched.km));
-  const hasStops = sched.stops.length > 0;
+  const finishMin = sched.arriveMin ?? sched.lastMin;
   const source = routeLoading ? 'กำลังคำนวณเส้นทาง…' : isRoad ? 'ตามถนนจริง' : 'ค่าประมาณ';
 
   return (
@@ -79,12 +82,12 @@ export function TripCard({
             <div>
               <div className="text-label">เริ่ม</div>
               <div className="text-value tabular-nums">
-                {fmtThaiDate(trip.start_date, days[dayIdx]?.dayNo ? days[dayIdx].dayNo - 1 : 0)} · {fmtClock(sched.firstMin ?? trip.day_start_min)}
+                {fmtThaiDate(trip.start_date, days[dayIdx]?.dayNo ? days[dayIdx].dayNo - 1 : 0)} · {fmtClock(hasStart ? trip.day_start_min : (sched.firstMin ?? trip.day_start_min))}
               </div>
             </div>
             <div>
               <div className="text-label">จบ</div>
-              <div className="text-value tabular-nums">{hasStops ? `${fmtClock(sched.lastMin ?? 0)} · ${sched.stops.length} จุด` : '— · 0 จุด'}</div>
+              <div className="text-value tabular-nums">{finishMin != null ? `${fmtClock(finishMin)} · ${sched.stops.length} จุด` : '— · 0 จุด'}</div>
             </div>
           </div>
         </div>

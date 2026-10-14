@@ -2,12 +2,15 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { RouteData } from './routes';
 import { toLeg } from './routes';
 import { supabase } from './supabase';
-import type { Trip } from './types';
+import type { Endpoint, Trip } from './types';
 
 export interface DayData {
   id: string;
   dayNo: number;
   placeIds: string[];
+  /** จุดรับ/ส่งลูกค้าของวัน (null = ยังไม่ตั้ง) */
+  start: Endpoint | null;
+  end: Endpoint | null;
   /** เส้นทางที่ cache ไว้ใน DB (null = ยังไม่เคยคำนวณ หรือลำดับเพิ่งเปลี่ยน) */
   route: RouteData | null;
 }
@@ -67,10 +70,18 @@ export async function fetchTrips(): Promise<TripListItem[]> {
   }));
 }
 
-/** วัน + จุดแวะ + เส้นทางที่ cache ไว้ */
+/** คำนวณเส้นทางได้เมื่อมีอย่างน้อย 2 จุด และมีจุดแวะหรือมีทั้งจุดรับและจุดส่ง */
+export const canRoute = (stopCount: number, start: Endpoint | null, end: Endpoint | null) =>
+  stopCount > 0 ? stopCount + (start ? 1 : 0) + (end ? 1 : 0) > 1 : !!start && !!end;
+
+/** วัน + จุดรับ/ส่ง + จุดแวะ + เส้นทางที่ cache ไว้ */
 export async function loadDays(db: SupabaseClient, tripId: string): Promise<DayData[]> {
   const [daysRes, routesRes] = await Promise.all([
-    db.from('trip_days').select('id,day_no,trip_stops(place_id,position,leg_km,leg_min)').eq('trip_id', tripId).order('day_no'),
+    db
+      .from('trip_days')
+      .select('id,day_no,start_name,start_lat,start_lng,end_name,end_lat,end_lng,start_leg_km,start_leg_min,trip_stops(place_id,position,leg_km,leg_min)')
+      .eq('trip_id', tripId)
+      .order('day_no'),
     db.rpc('trip_day_routes', { p_trip: tripId }),
   ]);
   if (daysRes.error) throw daysRes.error;
@@ -79,19 +90,32 @@ export async function loadDays(db: SupabaseClient, tripId: string): Promise<DayD
   );
 
   type StopRow = { place_id: string; position: number; leg_km: number | null; leg_min: number | null };
-  return (daysRes.data as { id: string; day_no: number; trip_stops: StopRow[] }[]).map((d) => {
+  type DayRow = {
+    id: string; day_no: number; trip_stops: StopRow[];
+    start_name: string | null; start_lat: number | null; start_lng: number | null;
+    end_name: string | null; end_lat: number | null; end_lng: number | null;
+    start_leg_km: number | null; start_leg_min: number | null;
+  };
+  return (daysRes.data as DayRow[]).map((d) => {
     const stops = [...d.trip_stops].sort((a, b) => a.position - b.position);
+    const start = d.start_lat != null && d.start_lng != null ? { name: d.start_name ?? 'จุดรับ', lat: d.start_lat, lng: d.start_lng } : null;
+    const end = d.end_lat != null && d.end_lng != null ? { name: d.end_name ?? 'จุดส่ง', lat: d.end_lat, lng: d.end_lng } : null;
     const geojson = geoByDay.get(d.id);
-    const legRows = stops.slice(0, -1);
-    const cached = geojson && stops.length > 1 && legRows.every((s) => s.leg_km != null && s.leg_min != null);
+    // จุดแวะที่ต้องมีระยะ/เวลา cache: ทุกจุดยกเว้นสุดท้าย (+ สุดท้าย → จุดส่ง ถ้ามีจุดส่ง)
+    const legRows = end ? stops : stops.slice(0, -1);
+    const startLegOk = !start || (d.start_leg_km != null && d.start_leg_min != null);
+    const cached = geojson && canRoute(stops.length, start, end) && startLegOk && legRows.every((s) => s.leg_km != null && s.leg_min != null);
     return {
       id: d.id,
       dayNo: d.day_no,
       placeIds: stops.map((s) => s.place_id),
+      start,
+      end,
       route: cached
         ? {
             geojson,
             line: geojson.coordinates.map(([lng, lat]) => [lat, lng] as [number, number]),
+            startLeg: start ? toLeg(Number(d.start_leg_km), Number(d.start_leg_min)) : null,
             legs: legRows.map((s) => toLeg(Number(s.leg_km), Number(s.leg_min))),
           }
         : null,
@@ -122,10 +146,27 @@ export async function updateTrip(id: string, patch: Partial<Pick<Trip, 'name' | 
   if (error) throw error;
 }
 
-export async function addDay(tripId: string, dayNo: number): Promise<string> {
-  const { data, error } = await supabase().from('trip_days').insert({ trip_id: tripId, day_no: dayNo }).select('id').single();
+export async function addDay(tripId: string, dayNo: number, start: Endpoint | null = null): Promise<string> {
+  const { data, error } = await supabase()
+    .from('trip_days')
+    .insert({ trip_id: tripId, day_no: dayNo, start_name: start?.name ?? null, start_lat: start?.lat ?? null, start_lng: start?.lng ?? null })
+    .select('id')
+    .single();
   if (error) throw error;
   return data.id as string;
+}
+
+/** ตั้ง/ล้างจุดรับ-ส่งของวัน (null = ล้าง) พร้อมล้าง cache เส้นทางของวันนั้น */
+export async function setDayEndpoints(dayId: string, start: Endpoint | null, end: Endpoint | null) {
+  const { error } = await supabase()
+    .from('trip_days')
+    .update({
+      start_name: start?.name ?? null, start_lat: start?.lat ?? null, start_lng: start?.lng ?? null,
+      end_name: end?.name ?? null, end_lat: end?.lat ?? null, end_lng: end?.lng ?? null,
+      route_geom: null, start_leg_km: null, start_leg_min: null,
+    })
+    .eq('id', dayId);
+  if (error) throw error;
 }
 
 export async function deleteDay(dayId: string) {
@@ -146,6 +187,7 @@ export async function saveDayRoute(dayId: string, placeIds: string[], route: Rou
     p_place_ids: placeIds,
     p_geojson: route.geojson,
     p_legs: route.legs.map((l) => ({ km: Number(l.km.toFixed(3)), min: l.min })),
+    p_start_leg: route.startLeg ? { km: Number(route.startLeg.km.toFixed(3)), min: route.startLeg.min } : null,
   });
   if (error) throw error;
   return data as boolean;
