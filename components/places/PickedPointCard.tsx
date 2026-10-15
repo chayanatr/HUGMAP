@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/Button';
 import { Icon } from '@/components/ui/Icon';
 import { IconButton } from '@/components/ui/IconButton';
 import { fmtKm, haversineKm } from '@/lib/geo';
-import type { PickedLocation } from '@/lib/placesSearch';
+import { guessCategoryFromGoogle, type PickedLocation } from '@/lib/placesSearch';
 
 export interface PickedPoint {
   lat: number;
@@ -12,6 +12,8 @@ export interface PickedPoint {
   address?: string;
   /** กำลังดึงชื่อ/ที่อยู่ของสถานที่ที่กด */
   loading?: boolean;
+  /** ชนิดสถานที่ของ Google — ใช้เดาหมวดตอนเพิ่มสถานที่ */
+  types?: string[];
 }
 
 /** ลิงก์ไปฟอร์มเพิ่มสถานที่พร้อมข้อมูลที่เติมให้ (ชื่อ/ที่อยู่/พิกัด) — ฟอร์มอ่านจาก query string */
@@ -19,6 +21,8 @@ export function newPlaceHref(p: PickedLocation | PickedPoint) {
   const q = new URLSearchParams({ lat: p.lat.toFixed(6), lng: p.lng.toFixed(6) });
   if (p.name) q.set('name', p.name);
   if (p.address) q.set('address', p.address);
+  const guessed = p.types ? guessCategoryFromGoogle(p.types) : null;
+  if (guessed) q.set('cat', guessed);
   return `/places/new?${q}`;
 }
 
