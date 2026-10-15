@@ -4,6 +4,7 @@ import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { MapSearch } from '@/components/MapSearch';
+import { guessCategoryFromGoogle, type PickedLocation } from '@/lib/placesSearch';
 import { PageShell, PanelBody, PanelHeader } from '@/components/shell/PageShell';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -121,6 +122,7 @@ export default function PlaceForm({ placeId }: { placeId?: string }) {
       lat: lat.toFixed(6),
       lng: lng.toFixed(6),
       city: guessCity({ lat, lng }),
+      category: /^[a-z0-9_]{2,32}$/.test(q.get('cat') ?? '') ? (q.get('cat') as string) : f.category,
     }));
     setTarget({ lat, lng, zoom: 17, key: 0 });
   }, [editing]);
@@ -135,6 +137,26 @@ export default function PlaceForm({ placeId }: { placeId?: string }) {
   const contextPlaces = useMemo(() => places.filter((p) => p.id !== placeId), [places, placeId]);
 
   const pick = (lat: number, lng: number) => setForm((f) => ({ ...f, lat: lat.toFixed(6), lng: lng.toFixed(6) }));
+
+  // เติมข้อมูลจากสถานที่ที่เลือกบน Google: พิกัด + (ชื่อ/เมือง/หมวดที่เดา) + ที่อยู่ในรายละเอียด
+  // overwrite = เลือกจากช่องค้นหา "จาก Google" ในฟอร์ม → แทนที่ชื่อเดิม; ช่องค้นหาบนแผนที่เติมชื่อเฉพาะเมื่อยังว่าง
+  const applyGoogle = (loc: PickedLocation, overwrite: boolean) => {
+    const guessed = guessCategoryFromGoogle(loc.types);
+    setForm((f) => {
+      const keepName = !overwrite && !!f.name.trim();
+      return {
+        ...f,
+        name: keepName ? f.name : loc.name,
+        desc: f.desc.trim() ? f.desc : loc.address,
+        lat: loc.lat.toFixed(6),
+        lng: loc.lng.toFixed(6),
+        city: keepName ? f.city : guessCity(loc),
+        category: !keepName && guessed && categories.some((c) => c.key === guessed) ? guessed : f.category,
+      };
+    });
+    setTarget({ lat: loc.lat, lng: loc.lng, zoom: 17, key: Date.now() });
+    if (overwrite) toast('เติมข้อมูลจาก Google แล้ว กรุณาตรวจชื่อ หมวด และรายละเอียดก่อนบันทึก');
+  };
 
   // ใช้ตำแหน่งปัจจุบัน (GPS) เป็นพิกัดสถานที่ — เหมาะเมื่อพนักงานยืนอยู่ที่สถานที่นั้น
   const [locating, setLocating] = useState(false);
@@ -243,6 +265,16 @@ export default function PlaceForm({ placeId }: { placeId?: string }) {
     ) : (
       <PanelBody>
         <Card className="flex flex-col gap-4 p-4">
+          {!editing && process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY && (
+            <div className="flex flex-col gap-1.5 rounded-item bg-brand-soft p-3">
+              <span className="flex items-center gap-1 text-[12px] font-medium text-brand-deep">
+                <Icon name="travel_explore" className="text-[16px]" />
+                ค้นหาจาก Google Maps เพื่อเติมข้อมูลให้อัตโนมัติ
+              </span>
+              <MapSearch onPickGoogle={(loc) => applyGoogle(loc, true)} />
+              <span className="text-label">เติมชื่อ พิกัด เมือง ที่อยู่ และเดาหมวดให้ แก้ไขได้ก่อนบันทึก</span>
+            </div>
+          )}
           <Input label="ชื่อสถานที่" required placeholder="เช่น วัดเชียงทอง" value={form.name} onChange={(e) => set('name', e.target.value)} error={errors.name} />
           <div className="flex flex-col gap-1.5">
             <div className="flex items-center justify-between gap-2">
@@ -418,17 +450,7 @@ export default function PlaceForm({ placeId }: { placeId?: string }) {
           )}
           <MapSearch
             className="absolute left-3 top-3 z-[1000] w-[calc(100%-4.75rem)] md:w-[360px]"
-            onPickGoogle={(loc) => {
-              setForm((f) => ({
-                ...f,
-                name: f.name.trim() ? f.name : loc.name,
-                desc: f.desc.trim() ? f.desc : loc.address,
-                lat: loc.lat.toFixed(6),
-                lng: loc.lng.toFixed(6),
-                city: f.name.trim() ? f.city : guessCity(loc),
-              }));
-              setTarget({ lat: loc.lat, lng: loc.lng, zoom: 17, key: Date.now() });
-            }}
+            onPickGoogle={(loc) => applyGoogle(loc, false)}
           />
           <div className="pointer-events-none absolute left-4 top-[68px] z-[1000] flex max-w-[calc(100%-5.5rem)] items-center gap-2 rounded-item bg-brand-deep px-3.5 py-2.5 text-[13px] leading-snug text-white shadow-overlay">
             <Icon name="touch_app" className="shrink-0 text-[18px] text-brand-mint" />

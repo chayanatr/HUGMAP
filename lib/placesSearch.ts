@@ -9,6 +9,24 @@ export interface PickedLocation {
   address: string;
   lat: number;
   lng: number;
+  /** primaryType + types ของ Google (เช่น restaurant, buddhist_temple) ใช้เดาหมวดตอนเพิ่มสถานที่ */
+  types: string[];
+}
+
+/** เดา key ของหมวดมาตรฐานจากชนิดสถานที่ของ Google (null = ไม่แน่ใจ — ปล่อยให้ผู้ใช้เลือกเอง) */
+export function guessCategoryFromGoogle(types: string[]): string | null {
+  const has = (...names: string[]) => types.some((t) => names.includes(t));
+  const ends = (suffix: string) => types.some((t) => t.endsWith(suffix));
+  if (has('lodging', 'hotel', 'guest_house', 'hostel', 'resort_hotel', 'bed_and_breakfast', 'motel', 'inn', 'cottage')) return 'stay';
+  if (has('cafe', 'coffee_shop', 'bakery', 'tea_house', 'dessert_shop', 'ice_cream_shop')) return 'cafe';
+  if (has('restaurant', 'food', 'bar', 'meal_takeaway', 'meal_delivery') || ends('_restaurant')) return 'food';
+  if (has('buddhist_temple', 'hindu_temple', 'place_of_worship', 'church', 'mosque', 'synagogue')) return 'temple';
+  if (has('museum', 'art_gallery', 'history_museum')) return 'museum';
+  if (has('gift_shop')) return 'gift';
+  if (has('market', 'farmers_market', 'supermarket', 'shopping_mall', 'night_market')) return 'market';
+  if (has('park', 'national_park', 'natural_feature', 'campground', 'hiking_area', 'waterfall', 'garden')) return 'nature';
+  if (has('observation_deck', 'scenic_spot', 'viewpoint')) return 'view';
+  return null;
 }
 
 export interface Suggestion {
@@ -51,9 +69,15 @@ export async function suggest(input: string, sessionToken: google.maps.places.Au
 }
 
 async function fetchLocation(place: google.maps.places.Place): Promise<PickedLocation> {
-  await place.fetchFields({ fields: ['displayName', 'formattedAddress', 'location'] });
+  await place.fetchFields({ fields: ['displayName', 'formattedAddress', 'location', 'primaryType', 'types'] });
   if (!place.location) throw new Error('no location');
-  return { name: place.displayName ?? '', address: place.formattedAddress ?? '', lat: place.location.lat(), lng: place.location.lng() };
+  return {
+    name: place.displayName ?? '',
+    address: place.formattedAddress ?? '',
+    lat: place.location.lat(),
+    lng: place.location.lng(),
+    types: [...(place.primaryType ? [place.primaryType] : []), ...(place.types ?? [])],
+  };
 }
 
 /** ตำแหน่ง/ชื่อ/ที่อยู่ของผลที่เลือกจากรายการค้นหา */

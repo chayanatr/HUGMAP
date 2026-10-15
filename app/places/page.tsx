@@ -48,7 +48,7 @@ export default function PlacesPage() {
     setPicked({ lat, lng, loading: !!placeId });
     if (!placeId) return;
     resolvePlaceId(placeId)
-      .then((loc) => seq === pickSeq.current && setPicked({ lat, lng, name: loc.name, address: loc.address }))
+      .then((loc) => seq === pickSeq.current && setPicked({ lat, lng, name: loc.name, address: loc.address, types: loc.types }))
       .catch(() => seq === pickSeq.current && setPicked({ lat, lng })); // ดึงชื่อไม่ได้ = ใช้พิกัดที่กด
   };
   const nearest = useMemo(() => (picked ? nearestSaved(picked, places) : null), [picked, places]);
@@ -148,7 +148,7 @@ export default function PlacesPage() {
             onPickGoogle={(loc) => {
               pickSeq.current++;
               setSelectedId(null);
-              setPicked({ lat: loc.lat, lng: loc.lng, name: loc.name, address: loc.address });
+              setPicked({ lat: loc.lat, lng: loc.lng, name: loc.name, address: loc.address, types: loc.types });
               setTarget({ lat: loc.lat, lng: loc.lng, zoom: 17, key: Date.now() });
             }}
           />
