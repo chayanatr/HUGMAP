@@ -14,6 +14,9 @@ export interface PickedPoint {
   loading?: boolean;
   /** ชนิดสถานที่ของ Google — ใช้เดาหมวดตอนเพิ่มสถานที่ */
   types?: string[];
+  /** แขวง/เมืองจากที่อยู่ของ Google (ถ้ามี) */
+  province?: string | null;
+  district?: string | null;
 }
 
 /** ลิงก์ไปฟอร์มเพิ่มสถานที่พร้อมข้อมูลที่เติมให้ (ชื่อ/ที่อยู่/พิกัด) — ฟอร์มอ่านจาก query string */
@@ -23,6 +26,10 @@ export function newPlaceHref(p: PickedLocation | PickedPoint) {
   if (p.address) q.set('address', p.address);
   const guessed = p.types ? guessCategoryFromGoogle(p.types) : null;
   if (guessed) q.set('cat', guessed);
+  if ('province' in p && p.province) {
+    q.set('province', p.province);
+    if (p.district) q.set('district', p.district);
+  }
   return `/places/new?${q}`;
 }
 

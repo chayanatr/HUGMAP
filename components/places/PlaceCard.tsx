@@ -3,7 +3,7 @@ import { Card, LabelValue } from '@/components/ui/Card';
 import { Icon } from '@/components/ui/Icon';
 import { Pill } from '@/components/ui/Pill';
 import { useCategories } from '@/components/CategoriesProvider';
-import { CITY_LABEL } from '@/lib/categories';
+import { regionText } from '@/lib/provinces';
 import { fmtDuration } from '@/lib/geo';
 import type { Place } from '@/lib/types';
 
@@ -38,7 +38,7 @@ export function PlaceCard({ place, selected, inTrip, onSelect }: { place: Place;
       <div className="grid grid-cols-[minmax(0,1fr)_44px] items-center gap-3 px-4 py-3.5">
         <div className="min-w-0">
           <div className="text-label">
-            {c.label} · {CITY_LABEL[place.city]}
+            {c.label} · {regionText(place)}
           </div>
           <div className="mt-0.5 truncate text-title">{place.name}</div>
         </div>

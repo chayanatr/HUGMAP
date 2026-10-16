@@ -28,7 +28,7 @@ export default function PlacesPage() {
   const toast = useToast();
   const trip = useCurrentTrip(toast);
   const [q, setQ] = useState('');
-  const [city, setCity] = useState('');
+  const [province, setProvince] = useState('');
   const [cats, setCats] = useState<CategoryKey[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   // จุดที่เลือกบนแผนที่ (กดแผนที่/กดสถานที่ของ Google/ผลค้นหา) → การ์ด "เพิ่มเป็นสถานที่ที่นี่"
@@ -48,7 +48,7 @@ export default function PlacesPage() {
     setPicked({ lat, lng, loading: !!placeId });
     if (!placeId) return;
     resolvePlaceId(placeId)
-      .then((loc) => seq === pickSeq.current && setPicked({ lat, lng, name: loc.name, address: loc.address, types: loc.types }))
+      .then((loc) => seq === pickSeq.current && setPicked({ lat, lng, name: loc.name, address: loc.address, types: loc.types, province: loc.province, district: loc.district }))
       .catch(() => seq === pickSeq.current && setPicked({ lat, lng })); // ดึงชื่อไม่ได้ = ใช้พิกัดที่กด
   };
   const nearest = useMemo(() => (picked ? nearestSaved(picked, places) : null), [picked, places]);
@@ -56,9 +56,9 @@ export default function PlacesPage() {
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
     return places.filter(
-      (p) => (!city || p.city === city) && (!cats.length || cats.includes(p.category)) && (!needle || p.name.toLowerCase().includes(needle)),
+      (p) => (!province || p.province === province) && (!cats.length || cats.includes(p.category)) && (!needle || p.name.toLowerCase().includes(needle)),
     );
-  }, [places, q, city, cats]);
+  }, [places, q, province, cats]);
 
   const selected = filtered.find((p) => p.id === selectedId) ?? null;
 
@@ -88,11 +88,12 @@ export default function PlacesPage() {
         <>
           <PanelHeader>
             <SearchField label="ค้นหาชื่อสถานที่" placeholder="ค้นหาสถานที่…" value={q} onChange={(e) => setQ(e.target.value)} />
+            {isAdmin && <IconButton icon="playlist_add" label="นำเข้าสถานที่แนะนำ" href="/places/import" />}
             {isAdmin && <IconButton icon="category" label="จัดการหมวดสถานที่" href="/places/categories" />}
             {isAdmin && <IconButton variant="primary" icon="add_location_alt" label="เพิ่มสถานที่" href="/places/new" />}
           </PanelHeader>
           <PanelBody>
-            <PlaceFilters city={city} cats={cats} count={filtered.length} onCity={setCity} onCats={setCats} />
+            <PlaceFilters province={province} cats={cats} count={filtered.length} onProvince={setProvince} onCats={setCats} />
             {q.trim().length >= 2 && process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY && (
               <button
                 type="button"
@@ -127,7 +128,7 @@ export default function PlacesPage() {
       }
       map={
         <>
-          <MapView places={mapPlaces} focus={selected} fitKey={`${status}|${city}|${cats.join(',')}`} onSelect={(id) => {
+          <MapView places={mapPlaces} focus={selected} fitKey={`${status}|${province}|${cats.join(',')}`} onSelect={(id) => {
               setPicked(null);
               setSelectedId(id);
             }}
@@ -148,7 +149,7 @@ export default function PlacesPage() {
             onPickGoogle={(loc) => {
               pickSeq.current++;
               setSelectedId(null);
-              setPicked({ lat: loc.lat, lng: loc.lng, name: loc.name, address: loc.address, types: loc.types });
+              setPicked({ lat: loc.lat, lng: loc.lng, name: loc.name, address: loc.address, types: loc.types, province: loc.province, district: loc.district });
               setTarget({ lat: loc.lat, lng: loc.lng, zoom: 17, key: Date.now() });
             }}
           />

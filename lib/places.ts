@@ -1,8 +1,8 @@
 import { supabase } from './supabase';
-import type { CategoryKey, CityKey, Place } from './types';
+import type { CategoryKey, Place } from './types';
 
 const BUCKET = 'place-photos';
-export const PLACE_COLUMNS = 'id,name,category,city,lat,lng,open_hours,fee,duration_min,description,photos';
+export const PLACE_COLUMNS = 'id,name,category,province,district,lat,lng,open_hours,fee,duration_min,description,photos';
 const COLUMNS = PLACE_COLUMNS;
 
 export const PHOTO_MAX_BYTES = 5 * 1024 * 1024;
@@ -12,7 +12,8 @@ export const PHOTO_MAX_COUNT = 5;
 export interface PlaceInput {
   name: string;
   category: CategoryKey;
-  city: CityKey;
+  province: string;
+  district: string | null;
   lat: number;
   lng: number;
   open_hours: string | null;
@@ -25,7 +26,8 @@ export interface PlaceInput {
 const toRow = (p: PlaceInput) => ({
   name: p.name,
   category: p.category,
-  city: p.city,
+  province: p.province,
+  district: p.district,
   location: `SRID=4326;POINT(${p.lng} ${p.lat})`,
   open_hours: p.open_hours,
   fee: p.fee,

@@ -2,7 +2,7 @@
 // ฟอร์มสถานที่ (ใช้ร่วมกันทั้งเพิ่ม/แก้ไข) — README §2
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { MapSearch } from '@/components/MapSearch';
 import { guessCategoryFromGoogle, type PickedLocation } from '@/lib/placesSearch';
 import { PageShell, PanelBody, PanelHeader } from '@/components/shell/PageShell';
@@ -15,11 +15,12 @@ import { Select } from '@/components/ui/Select';
 import { useToast } from '@/components/ui/Toast';
 import { useCategories } from '@/components/CategoriesProvider';
 import { CategoryDialog } from '@/components/places/CategoryDialog';
-import { CITIES, LAO_BOUNDS } from '@/lib/categories';
+import { LAO_BOUNDS } from '@/lib/categories';
+import { resolveRegion } from '@/lib/geocode';
+import { PROVINCES } from '@/lib/provinces';
 import { createCategory } from '@/lib/categoriesApi';
 import { cn } from '@/lib/cn';
 import { fixMessage, geoErrorMessage, getMyPosition } from '@/lib/geolocation';
-import { guessCity } from '@/lib/geo';
 import {
   PHOTO_MAX_BYTES,
   PHOTO_MAX_COUNT,
@@ -32,13 +33,14 @@ import {
   uploadPlacePhoto,
   type PlaceInput,
 } from '@/lib/places';
-import type { CategoryKey, CityKey } from '@/lib/types';
+import type { CategoryKey } from '@/lib/types';
 import { usePlaces } from '@/lib/usePlaces';
 
 const MapView = dynamic(() => import('@/components/MapView'), { ssr: false });
 
-export function validatePlace(f: { name: string; lat: string; lng: string; duration: string }) {
+export function validatePlace(f: { name: string; lat: string; lng: string; duration: string; province: string }) {
   const e: Record<string, string> = {};
+  if (!f.province) e.province = 'กรุณาเลือกแขวง';
   const lat = parseFloat(f.lat), lng = parseFloat(f.lng);
   if (!f.name.trim()) e.name = 'กรุณากรอกชื่อสถานที่';
   if (isNaN(lat) || isNaN(lng)) e.coord = 'กรุณาระบุพิกัด หรือคลิกบนแผนที่';
@@ -51,7 +53,8 @@ export function validatePlace(f: { name: string; lat: string; lng: string; durat
 interface FormState {
   name: string;
   category: CategoryKey;
-  city: CityKey;
+  province: string;
+  district: string;
   lat: string;
   lng: string;
   open: string;
@@ -59,8 +62,9 @@ interface FormState {
   duration: string;
   desc: string;
 }
-const EMPTY: FormState = { name: '', category: 'temple', city: 'lp', lat: '', lng: '', open: '', fee: '', duration: '30', desc: '' };
-const CITY_OPTIONS = CITIES.map((c) => ({ value: c.key, label: c.label }));
+const EMPTY: FormState = { name: '', category: 'temple', province: '', district: '', lat: '', lng: '', open: '', fee: '', duration: '30', desc: '' };
+const PROVINCE_OPTIONS = [{ value: '', label: 'เลือกแขวง' }, ...PROVINCES.map((p) => ({ value: p.key, label: p.label }))];
+const coordKey = (lat: number, lng: number) => `${lat.toFixed(4)},${lng.toFixed(4)}`;
 
 type LoadState = 'loading' | 'ready' | 'missing' | 'error';
 
@@ -92,7 +96,8 @@ export default function PlaceForm({ placeId }: { placeId?: string }) {
         setForm({
           name: p.name,
           category: p.category,
-          city: p.city,
+          province: p.province,
+          district: p.district ?? '',
           lat: String(p.lat),
           lng: String(p.lng),
           open: p.open_hours ?? '',
@@ -121,11 +126,41 @@ export default function PlaceForm({ placeId }: { placeId?: string }) {
       desc: (q.get('address') ?? '').slice(0, 300),
       lat: lat.toFixed(6),
       lng: lng.toFixed(6),
-      city: guessCity({ lat, lng }),
+      // แขวง/เมืองที่ Google ระบุมากับลิงก์ (ไม่มี = ให้ระบบหาจากพิกัดด้านล่าง)
+      province: PROVINCES.some((p) => p.key === q.get('province')) ? (q.get('province') as string) : f.province,
+      district: (q.get('district') ?? '').slice(0, 80),
       category: /^[a-z0-9_]{2,32}$/.test(q.get('cat') ?? '') ? (q.get('cat') as string) : f.category,
     }));
+    if (PROVINCES.some((p) => p.key === q.get('province'))) resolvedKey.current = coordKey(lat, lng);
     setTarget({ lat, lng, zoom: 17, key: 0 });
   }, [editing]);
+
+  // แขวง/เมืองตรงกับตำแหน่งบนแผนที่อัตโนมัติ: เมื่อพิกัดเปลี่ยน (คลิกแผนที่ ลากหมุด GPS พิมพ์เอง) หาแขวง/เมืองใหม่
+  // (ไม่ทับถ้าผู้ใช้แก้แขวง/เมืองเองหลังจากนั้น; เปิดแก้ไขสถานที่เดิมจะไม่ทับค่าที่บันทึกไว้จนกว่าจะย้ายตำแหน่ง)
+  const resolvedKey = useRef('');
+  const regionTouched = useRef(false);
+  const editInitDone = useRef(false);
+  const [regionNote, setRegionNote] = useState('');
+  useEffect(() => {
+    if (loadState !== 'ready') return;
+    const lat = parseFloat(form.lat), lng = parseFloat(form.lng);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+    const key = coordKey(lat, lng);
+    if (editing && !editInitDone.current) {
+      editInitDone.current = true;
+      resolvedKey.current = key;
+      return;
+    }
+    if (resolvedKey.current === key) return;
+    const t = setTimeout(async () => {
+      const r = await resolveRegion(lat, lng);
+      if (regionTouched.current) return;
+      resolvedKey.current = key;
+      setForm((f) => (coordKey(parseFloat(f.lat), parseFloat(f.lng)) === key ? { ...f, province: r.province, district: r.district ?? '' } : f));
+      setRegionNote(r.estimated ? 'คาดจากตำแหน่งบนแผนที่ — กรุณาตรวจสอบ' : 'ตรงกับตำแหน่งบนแผนที่ (ตรวจพบอัตโนมัติ)');
+    }, 700);
+    return () => clearTimeout(t);
+  }, [form.lat, form.lng, loadState, editing]);
 
   useEffect(() => () => newPhotos.forEach((p) => URL.revokeObjectURL(p.preview)), [newPhotos]);
 
@@ -136,12 +171,21 @@ export default function PlaceForm({ placeId }: { placeId?: string }) {
   const pin = Number.isFinite(latN) && Number.isFinite(lngN) ? { lat: latN, lng: lngN } : null;
   const contextPlaces = useMemo(() => places.filter((p) => p.id !== placeId), [places, placeId]);
 
-  const pick = (lat: number, lng: number) => setForm((f) => ({ ...f, lat: lat.toFixed(6), lng: lng.toFixed(6) }));
+  const pick = (lat: number, lng: number) => {
+    regionTouched.current = false; // ย้ายตำแหน่งใหม่ → ให้ระบบหาแขวง/เมืองใหม่
+    setForm((f) => ({ ...f, lat: lat.toFixed(6), lng: lng.toFixed(6) }));
+  };
 
   // เติมข้อมูลจากสถานที่ที่เลือกบน Google: พิกัด + (ชื่อ/เมือง/หมวดที่เดา) + ที่อยู่ในรายละเอียด
   // overwrite = เลือกจากช่องค้นหา "จาก Google" ในฟอร์ม → แทนที่ชื่อเดิม; ช่องค้นหาบนแผนที่เติมชื่อเฉพาะเมื่อยังว่าง
   const applyGoogle = (loc: PickedLocation, overwrite: boolean) => {
     const guessed = guessCategoryFromGoogle(loc.types);
+    // แขวง/เมืองจากที่อยู่ของ Google ตรงกับแผนที่; ถ้า Google ไม่ระบุแขวง ให้ useEffect ด้านบนหาจากพิกัด
+    regionTouched.current = false;
+    if (loc.province) {
+      resolvedKey.current = coordKey(loc.lat, loc.lng);
+      setRegionNote('ตรงกับตำแหน่งบนแผนที่ (จาก Google)');
+    }
     setForm((f) => {
       const keepName = !overwrite && !!f.name.trim();
       return {
@@ -150,7 +194,8 @@ export default function PlaceForm({ placeId }: { placeId?: string }) {
         desc: f.desc.trim() ? f.desc : loc.address,
         lat: loc.lat.toFixed(6),
         lng: loc.lng.toFixed(6),
-        city: keepName ? f.city : guessCity(loc),
+        province: loc.province ?? f.province,
+        district: loc.province ? (loc.district ?? '') : f.district,
         category: !keepName && guessed && categories.some((c) => c.key === guessed) ? guessed : f.category,
       };
     });
@@ -207,7 +252,8 @@ export default function PlaceForm({ placeId }: { placeId?: string }) {
       const input: PlaceInput = {
         name: form.name.trim(),
         category: form.category,
-        city: form.city,
+        province: form.province,
+        district: form.district.trim() || null,
         lat: latN,
         lng: lngN,
         open_hours: form.open.trim() || null,
@@ -319,7 +365,43 @@ export default function PlaceForm({ placeId }: { placeId?: string }) {
               })}
             </div>
           </div>
-          <Select label="เมือง / แขวง" options={CITY_OPTIONS} value={form.city} onChange={(e) => set('city', e.target.value as CityKey)} />
+          <div className="flex flex-col gap-1.5">
+            <div className="grid grid-cols-2 gap-2">
+              <Select
+                label="แขวง"
+                required
+                options={PROVINCE_OPTIONS}
+                value={form.province}
+                aria-invalid={!!errors.province}
+                onChange={(e) => {
+                  regionTouched.current = true;
+                  setRegionNote('');
+                  set('province', e.target.value);
+                }}
+              />
+              <Input
+                label="เมือง"
+                placeholder="เช่น เมืองวังเวียง"
+                value={form.district}
+                onChange={(e) => {
+                  regionTouched.current = true;
+                  setRegionNote('');
+                  set('district', e.target.value);
+                }}
+              />
+            </div>
+            {errors.province && (
+              <span role="alert" className="text-[12px] text-danger-text">
+                {errors.province}
+              </span>
+            )}
+            {regionNote && (
+              <span className="flex items-center gap-1 text-[12px] text-muted">
+                <Icon name="my_location" className="text-[14px] text-brand" />
+                {regionNote}
+              </span>
+            )}
+          </div>
         </Card>
 
         <Card className="flex flex-col gap-4 p-4">

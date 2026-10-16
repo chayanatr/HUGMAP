@@ -1,12 +1,14 @@
 /** key ของหมวดในตาราง place_categories (หมวดเริ่มต้น: temple, cafe, food, stay, nature, market, view, museum, gift + หมวดที่ผู้ดูแลเพิ่ม) */
 export type CategoryKey = string;
-export type CityKey = 'lp' | 'vte' | 'vv' | 'pakse' | 'other';
 
 export interface Place {
   id: string;
   name: string;
   category: CategoryKey;
-  city: CityKey;
+  /** key ของแขวง (lib/provinces.ts) */
+  province: string;
+  /** เมือง/อำเภอ เช่น เมืองวังเวียง (ไม่บังคับ) */
+  district: string | null;
   lat: number;
   lng: number;
   open_hours: string | null;   // "08:00–17:00"
