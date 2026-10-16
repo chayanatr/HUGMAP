@@ -1,12 +1,22 @@
 'use client';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
+import { Input, Textarea } from '@/components/ui/Input';
 import { fmtClock } from '@/lib/geo';
 import { clockToMin } from '@/lib/format';
 import type { Trip } from '@/lib/types';
 
-type Patch = Partial<Pick<Trip, 'name' | 'client_name' | 'pax' | 'start_date' | 'day_start_min'>>;
+type Patch = Partial<Pick<Trip, 'name' | 'client_name' | 'pax' | 'start_date' | 'day_start_min' | 'subtitle' | 'lodging_note' | 'footer_note'>>;
+const formOf = (trip: Trip) => ({
+  name: trip.name,
+  client: trip.client_name,
+  pax: String(trip.pax),
+  date: trip.start_date,
+  time: fmtClock(trip.day_start_min),
+  subtitle: trip.subtitle ?? '',
+  lodging: trip.lodging_note ?? '',
+  footer: trip.footer_note ?? '',
+});
 
 /** แก้ไขข้อมูลทริป — ใช้ <dialog> ของเบราว์เซอร์ (focus trap + ปิดด้วย Esc ในตัว) */
 export function TripSettingsDialog({
@@ -26,14 +36,14 @@ export function TripSettingsDialog({
   onRevokeLink: () => void;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
-  const [form, setForm] = useState({ name: trip.name, client: trip.client_name, pax: String(trip.pax), date: trip.start_date, time: fmtClock(trip.day_start_min) });
+  const [form, setForm] = useState(formOf(trip));
   const [showErrors, setShowErrors] = useState(false);
 
   useEffect(() => {
     const d = ref.current;
     if (!d) return;
     if (open && !d.open) {
-      setForm({ name: trip.name, client: trip.client_name, pax: String(trip.pax), date: trip.start_date, time: fmtClock(trip.day_start_min) });
+      setForm(formOf(trip));
       setShowErrors(false);
       d.showModal();
     }
@@ -52,7 +62,16 @@ export function TripSettingsDialog({
     e.preventDefault();
     setShowErrors(true);
     if (Object.values(errors).some(Boolean)) return;
-    onSave({ name: form.name.trim(), client_name: form.client.trim(), pax: Math.round(+form.pax), start_date: form.date, day_start_min: clockToMin(form.time) });
+    onSave({
+      name: form.name.trim(),
+      client_name: form.client.trim(),
+      pax: Math.round(+form.pax),
+      start_date: form.date,
+      day_start_min: clockToMin(form.time),
+      subtitle: form.subtitle.trim() || null,
+      lodging_note: form.lodging.trim() || null,
+      footer_note: form.footer.trim() || null,
+    });
     onClose();
   }
 
@@ -60,7 +79,7 @@ export function TripSettingsDialog({
     <dialog
       ref={ref}
       onClose={onClose}
-      className="m-auto w-[min(92vw,440px)] rounded-section bg-surface p-0 text-ink shadow-dropdown backdrop:bg-ink/40"
+      className="m-auto max-h-[92vh] w-[min(92vw,440px)] overflow-y-auto rounded-section bg-surface p-0 text-ink shadow-dropdown backdrop:bg-ink/40"
     >
       <form noValidate onSubmit={submit} className="flex flex-col gap-4 p-5">
         <h2 className="text-h2">ข้อมูลทริป · {trip.code}</h2>
@@ -71,6 +90,12 @@ export function TripSettingsDialog({
           <Input label="เวลาเริ่มของแต่ละวัน" type="time" value={form.time} onChange={(e) => set('time', e.target.value)} />
         </div>
         <Input label="วันที่เริ่มเดินทาง" type="date" value={form.date} onChange={(e) => set('date', e.target.value)} error={showErrors ? errors.date : ''} />
+        <fieldset className="flex flex-col gap-3 rounded-item border border-line-border p-3">
+          <legend className="px-1 text-[12px] font-medium text-muted">ข้อความในตารางเดินทางลูกค้า</legend>
+          <Input label="หัวเรื่องย่อย" maxLength={160} placeholder="เช่น รถตู้ส่วนตัวพร้อมคนขับ 2 วัน 1 คืน" value={form.subtitle} onChange={(e) => set('subtitle', e.target.value)} />
+          <Input label="ที่พัก" maxLength={160} placeholder="เช่น พักเมืองเฟือง 1 คืน" value={form.lodging} onChange={(e) => set('lodging', e.target.value)} />
+          <Textarea label="หมายเหตุท้ายตาราง" rows={3} maxLength={1500} placeholder="เช่น ลูกค้าเลือกและชำระค่าที่พักแยก" value={form.footer} onChange={(e) => set('footer', e.target.value)} />
+        </fieldset>
         <div className="flex items-center justify-between gap-3 rounded-item bg-panel px-3.5 py-2.5">
           <div className="min-w-0">
             <div className="text-label">ลิงก์ลูกค้า</div>

@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { MapSearch } from '@/components/MapSearch';
 import { Button } from '@/components/ui/Button';
 import { Icon } from '@/components/ui/Icon';
-import { Input } from '@/components/ui/Input';
+import { Input, Textarea } from '@/components/ui/Input';
 import { useToast } from '@/components/ui/Toast';
 import { useCategories } from '@/components/CategoriesProvider';
 import { cn } from '@/lib/cn';
@@ -16,6 +16,8 @@ export interface EndpointDraft {
   name: string;
   lat: number | null;
   lng: number | null;
+  /** หมายเหตุที่จุดนี้ (แสดงในตารางเดินทางลูกค้า) */
+  note: string;
 }
 
 export const KIND_LABEL: Record<EndpointKind, string> = { start: 'จุดรับลูกค้า', end: 'จุดส่งลูกค้า' };
@@ -46,7 +48,7 @@ export function EndpointDialog({
   places: Place[];
   onChange: (d: EndpointDraft) => void;
   onPickOnMap: () => void;
-  onSave: (e: Endpoint) => void;
+  onSave: (e: Endpoint, note: string | null) => void;
   onClear: () => void;
   onClose: () => void;
 }) {
@@ -73,7 +75,7 @@ export function EndpointDialog({
   const nameError = showErrors && !draft.name.trim() ? 'กรุณากรอกชื่อจุด' : '';
 
   function pickPlace(p: Place) {
-    onChange({ name: p.name, lat: p.lat, lng: p.lng });
+    onChange({ ...draft, name: p.name, lat: p.lat, lng: p.lng });
   }
 
   async function useGps() {
@@ -81,7 +83,7 @@ export function EndpointDialog({
     setGps(true);
     try {
       const fix = await getMyPosition();
-      onChange({ name: draft.name.trim() || DEFAULT_NAME[kind], lat: fix.lat, lng: fix.lng });
+      onChange({ ...draft, name: draft.name.trim() || DEFAULT_NAME[kind], lat: fix.lat, lng: fix.lng });
     } catch (e) {
       toast(geoErrorMessage(e), 'error');
     } finally {
@@ -93,7 +95,7 @@ export function EndpointDialog({
     e.preventDefault();
     setShowErrors(true);
     if (!draft.name.trim() || draft.lat == null || draft.lng == null) return;
-    onSave({ name: draft.name.trim(), lat: draft.lat, lng: draft.lng });
+    onSave({ name: draft.name.trim(), lat: draft.lat, lng: draft.lng }, draft.note.trim() || null);
   }
 
   return (
@@ -113,7 +115,7 @@ export function EndpointDialog({
           <MapSearch
             places={places}
             onSelectSaved={pickPlace}
-            onPickGoogle={(loc) => onChange({ name: loc.name || draft.name, lat: loc.lat, lng: loc.lng })}
+            onPickGoogle={(loc) => onChange({ ...draft, name: loc.name || draft.name, lat: loc.lat, lng: loc.lng })}
           />
           {stays.length > 0 && <div className="text-label">ที่พักที่บันทึกไว้</div>}
           <ul className="flex flex-col gap-1.5">
@@ -155,6 +157,14 @@ export function EndpointDialog({
         <div className="flex flex-col gap-2">
           <div className="text-label">2. ตั้งชื่อ</div>
           <Input label="ชื่อจุด" required value={draft.name} onChange={(e) => onChange({ ...draft, name: e.target.value })} error={nameError} placeholder="เช่น สนามบินหลวงพระบาง" />
+          <Textarea
+            label="หมายเหตุ (แสดงในตารางเดินทางลูกค้า)"
+            rows={3}
+            maxLength={600}
+            placeholder={kind === 'start' ? 'เช่น หลังผ่านตรวจคนเข้าเมืองแล้ว ออกเดินทางสู่วังเวียง กรุณารับประทานอาหารเช้าก่อนขึ้นรถ' : 'เช่น พักผ่อน ชมวิว และรับประทานอาหารเย็น'}
+            value={draft.note}
+            onChange={(e) => onChange({ ...draft, note: e.target.value })}
+          />
         </div>
 
         <div className="flex items-center gap-2 pt-1">

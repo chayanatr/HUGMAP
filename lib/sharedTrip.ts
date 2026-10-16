@@ -2,7 +2,7 @@ import { nearestSegment, placeHit, routePoints } from './geo';
 import { toLeg } from './routes';
 import type { SummaryData, SummaryDay } from './summary';
 import { serverSupabase } from './supabaseServer';
-import type { Endpoint, Place, Trip } from './types';
+import type { Endpoint, Place, StopMeta, Trip } from './types';
 
 const SHARE_RADIUS_KM = 1;
 const TOKEN_FORMAT = /^[0-9a-f]{32}$/i;
@@ -15,7 +15,14 @@ interface SharedDay {
   end: Endpoint | null;
   start_leg_km: number | null;
   start_leg_min: number | null;
-  stops: { place: Place; leg_km: number | null; leg_min: number | null }[];
+  title: string | null;
+  start_min: number | null;
+  start_note: string | null;
+  end_note: string | null;
+  stops: {
+    place: Place; leg_km: number | null; leg_min: number | null;
+    note: string | null; stay_min: number | null; break_label: string | null; break_min: number | null;
+  }[];
   nearby: { place: Place; distance_m: number }[];
 }
 interface SharedTrip {
@@ -44,6 +51,15 @@ export async function fetchSharedSummary(token: string): Promise<SummaryData | n
       id: d.id,
       dayNo: d.day_no,
       places,
+      title: d.title ?? null,
+      startMin: d.start_min ?? null,
+      startNote: d.start_note ?? null,
+      endNote: d.end_note ?? null,
+      stopMeta: Object.fromEntries(
+        d.stops
+          .filter((s) => s.note || s.stay_min || s.break_label || s.break_min)
+          .map((s) => [s.place.id, { note: s.note, stayMin: s.stay_min, breakLabel: s.break_label, breakMin: s.break_min } satisfies StopMeta]),
+      ),
       start,
       end,
       startLeg: cached && start ? toLeg(Number(d.start_leg_km), Number(d.start_leg_min)) : null,

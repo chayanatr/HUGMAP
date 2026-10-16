@@ -1,4 +1,4 @@
-import type { Endpoint, Leg, NearbyHit, Place, ScheduledStop } from './types';
+import type { Endpoint, Leg, NearbyHit, Place, ScheduledStop, StopMeta } from './types';
 
 type LL = { lat: number; lng: number };
 const rad = (d: number) => (d * Math.PI) / 180;
@@ -40,6 +40,8 @@ export interface ScheduleEnds {
   start?: LL | null;
   end?: LL | null;
   startLeg?: Leg | null;
+  /** รายละเอียดจุดแวะตาม place_id (เวลาอยู่/หมายเหตุ/พักหลังจุดนี้) */
+  meta?: Record<string, StopMeta>;
 }
 
 /** dayStartMin = เวลาออกจากจุดรับ (ถ้ามีจุดรับ) ไม่เช่นนั้นคือเวลาถึงจุดแวะแรก; legs[i] = จุดแวะ i → ถัดไป (จุดสุดท้าย → จุดส่ง ถ้ามี) */
@@ -55,13 +57,19 @@ export function schedule(places: Place[], dayStartMin = 540, legs?: (Leg | null)
   const stops: ScheduledStop[] = places.map((p, i) => {
     const oh = parseOpenHours(p.open_hours);
     const waitMin = oh && t < oh.open ? oh.open - t : 0;
+    const m = ends.meta?.[p.id];
+    const durationMin = m?.stayMin ?? (p.duration_min || 30);
+    const breakMin = m?.breakMin ?? 0;
     const startMin = t + waitMin;
-    const endMin = startMin + (p.duration_min || 30);
+    const endMin = startMin + durationMin;
     const next = places[i + 1] ?? ends.end;
     const leg = next ? legs?.[i] ?? estimateLeg(p, next) : null;
     if (leg) { km += leg.km; travelMin += leg.min; }
-    t = endMin + (leg?.min ?? 0);
-    return { place: p, index: i, startMin, endMin, waitMin, closesBeforeEnd: !!oh && endMin > oh.close, leg };
+    t = endMin + breakMin + (leg?.min ?? 0); // พักหลังจุดนี้ (ถ้ามี) ก่อนออกเดินทางไปจุดถัดไป
+    return {
+      place: p, index: i, startMin, endMin, waitMin, closesBeforeEnd: !!oh && endMin > oh.close, leg,
+      durationMin, note: m?.note ?? null, breakLabel: breakMin ? (m?.breakLabel || 'พักระหว่างทาง') : null, breakMin,
+    };
   });
   return {
     stops, km, travelMin, startLeg,
