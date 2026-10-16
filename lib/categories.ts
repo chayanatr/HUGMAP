@@ -1,5 +1,3 @@
-import type { CityKey } from './types';
-
 /** หมวดสถานที่เก็บในตาราง place_categories (ผู้ดูแลเพิ่ม/แก้ไขเองได้); ใช้ผ่าน useCategories() */
 export interface CategoryRow {
   key: string;
@@ -58,13 +56,6 @@ export const CATEGORY_ICONS = [
 
 /** สีให้เลือก (hue ของ oklch) */
 export const CATEGORY_HUES = [25, 45, 75, 110, 155, 185, 215, 260, 295, 320, 355, 0];
-
-export const CITIES: { key: CityKey; label: string }[] = [
-  { key: 'lp', label: 'หลวงพระบาง' }, { key: 'vte', label: 'เวียงจันทน์' }, { key: 'vv', label: 'วังเวียง' },
-  { key: 'pakse', label: 'ปากเซ' }, { key: 'other', label: 'อื่น ๆ' },
-];
-
-export const CITY_LABEL = Object.fromEntries(CITIES.map((c) => [c.key, c.label])) as Record<CityKey, string>;
 
 export const LAO_BOUNDS = { latMin: 13.9, latMax: 22.5, lngMin: 100.0, lngMax: 107.7 };
 export const RADIUS_OPTIONS_KM = [0.5, 1, 2, 3, 5];

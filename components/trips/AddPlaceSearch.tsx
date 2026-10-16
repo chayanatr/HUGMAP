@@ -4,7 +4,7 @@ import { SearchField } from '@/components/shell/SearchField';
 import { CategoryTile } from '@/components/places/PlaceCard';
 import { Icon } from '@/components/ui/Icon';
 import { useCategories } from '@/components/CategoriesProvider';
-import { CITY_LABEL } from '@/lib/categories';
+import { regionText } from '@/lib/provinces';
 import type { Place } from '@/lib/types';
 
 const MAX_RESULTS = 6;
@@ -63,7 +63,7 @@ export function AddPlaceSearch({ places, excludeIds, onAdd }: { places: Place[];
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-[14px] font-semibold">{p.name}</span>
                   <span className="block text-label">
-                    {cat(p.category).label} · {CITY_LABEL[p.city]}
+                    {cat(p.category).label} · {regionText(p)}
                   </span>
                 </span>
                 <Icon name="add_circle" className="text-[22px] text-brand" />

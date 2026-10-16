@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/Button';
 import { DarkCard } from '@/components/ui/Card';
 import { Icon } from '@/components/ui/Icon';
 import { useCategories } from '@/components/CategoriesProvider';
-import { CITY_LABEL } from '@/lib/categories';
+import { regionText } from '@/lib/provinces';
 import { fmtDuration } from '@/lib/geo';
 import type { Place } from '@/lib/types';
 
@@ -27,7 +27,7 @@ export function PlaceDetailCard({ place, onClose, canEdit, tripAction }: { place
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1 text-[12px] text-dark-muted">
             <Icon name={c.icon} className="text-[14px]" />
-            {c.label} · {CITY_LABEL[place.city]}
+            {c.label} · {regionText(place)}
           </div>
           <h2 className="mt-0.5 text-[16px] font-bold leading-snug">{place.name}</h2>
           <div className="text-[12px] tabular-nums text-dark-muted">

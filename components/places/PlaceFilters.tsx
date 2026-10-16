@@ -5,23 +5,23 @@ import { Card } from '@/components/ui/Card';
 import { Icon } from '@/components/ui/Icon';
 import { Select } from '@/components/ui/Select';
 import { useCategories } from '@/components/CategoriesProvider';
-import { CITIES } from '@/lib/categories';
 import { cn } from '@/lib/cn';
+import { PROVINCES } from '@/lib/provinces';
 import type { CategoryKey } from '@/lib/types';
 
-const CITY_OPTIONS = [{ value: '', label: 'ทุกเมือง' }, ...CITIES.map((c) => ({ value: c.key, label: c.label }))];
+const PROVINCE_OPTIONS = [{ value: '', label: 'ทุกแขวง' }, ...PROVINCES.map((p) => ({ value: p.key, label: p.label }))];
 
 export function PlaceFilters({
-  city,
+  province,
   cats,
   count,
-  onCity,
+  onProvince,
   onCats,
 }: {
-  city: string;
+  province: string;
   cats: CategoryKey[];
   count: number;
-  onCity: (v: string) => void;
+  onProvince: (v: string) => void;
   onCats: (v: CategoryKey[]) => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -32,7 +32,7 @@ export function PlaceFilters({
   return (
     <>
       <div className="flex items-center gap-2">
-        <Select variant="pill" aria-label="เมือง" value={city} onChange={(e) => onCity(e.target.value)} options={CITY_OPTIONS} />
+        <Select variant="pill" aria-label="แขวง" value={province} onChange={(e) => onProvince(e.target.value)} options={PROVINCE_OPTIONS} />
         <button
           type="button"
           aria-expanded={open}
