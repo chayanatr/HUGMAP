@@ -17,10 +17,12 @@ import {
   revokeShareToken,
   saveDayRoute,
   setDayEndpoints,
+  updateDayInfo as updateDayInfoRow,
+  updateStopMeta as updateStopMetaRow,
   updateTrip as updateTripRow,
   type DayData,
 } from './trips';
-import type { Endpoint, NearbyHit, Place, Trip } from './types';
+import type { Endpoint, NearbyHit, Place, StopMeta, Trip } from './types';
 
 export type TripStatus = 'loading' | 'ready' | 'missing' | 'error';
 
@@ -84,15 +86,18 @@ export function useTripPlanner(tripId: string, places: Place[], notify: (message
   const end = day?.end ?? null;
   const endsKey = `${start ? `${start.lat},${start.lng}` : ''}|${end ? `${end.lat},${end.lng}` : ''}`;
   const routeable = !!day && canRoute(day.placeIds.length, start, end);
+  /** เวลาออกเดินทางของวันนี้ (ตั้งเฉพาะวัน หรือใช้เวลาเริ่มของทริป) */
+  const departMin = day?.startMin ?? trip?.day_start_min ?? 540;
 
   const sched = useMemo(
     () =>
-      schedule(dayPlaces, trip?.day_start_min ?? 540, placesReady ? day?.route?.legs : undefined, {
+      schedule(dayPlaces, departMin, placesReady ? day?.route?.legs : undefined, {
         start,
         end,
         startLeg: placesReady ? day?.route?.startLeg : null,
+        meta: day?.stopMeta,
       }),
-    [dayPlaces, trip?.day_start_min, placesReady, day?.route, start, end],
+    [dayPlaces, departMin, placesReady, day?.route, start, end, day?.stopMeta],
   );
 
   // ---- เส้นทางตามถนนจริง (cache ใน DB; คำนวณใหม่เมื่อลำดับหรือจุดรับ/ส่งเปลี่ยน) ----
@@ -159,7 +164,11 @@ export function useTripPlanner(tripId: string, places: Place[], notify: (message
     (idx: number, ids: string[]) => {
       const target = days[idx];
       if (!target) return;
-      setDays((prev) => prev.map((d, i) => (i === idx ? { ...d, placeIds: ids, route: null } : d)));
+      setDays((prev) =>
+        prev.map((d, i) =>
+          i === idx ? { ...d, placeIds: ids, route: null, stopMeta: Object.fromEntries(Object.entries(d.stopMeta).filter(([pid]) => ids.includes(pid))) } : d,
+        ),
+      );
       enqueue(target.id, () => reorderDay(target.id, ids)).catch(() => {
         notify('บันทึกลำดับไม่สำเร็จ กรุณาลองอีกครั้ง');
         load();
@@ -237,6 +246,41 @@ export function useTripPlanner(tripId: string, places: Place[], notify: (message
     notify(`เพิ่มสถานที่แนะนำ ${ordered.length} แห่งในวันที่ ${day.dayNo}`);
   }, [day, routeable, allHits, start, end, dayIdx, setIds, notify]);
 
+  // ---- ข้อมูลประกอบตารางเดินทางลูกค้า (ชื่อวัน เวลาออกเดินทาง หมายเหตุ / รายละเอียดจุดแวะ) ----
+  const updateDayInfo = useCallback(
+    (patch: Partial<Pick<DayData, 'title' | 'startMin' | 'startNote' | 'endNote'>>) => {
+      const target = days[dayIdx];
+      if (!target) return;
+      const next = { title: target.title, startMin: target.startMin, startNote: target.startNote, endNote: target.endNote, ...patch };
+      setDays((prev) => prev.map((d, i) => (i === dayIdx ? { ...d, ...next } : d)));
+      enqueue(target.id, () => updateDayInfoRow(target.id, next)).catch(() => {
+        notify('บันทึกข้อมูลวันไม่สำเร็จ กรุณาลองอีกครั้ง');
+        load();
+      });
+    },
+    [days, dayIdx, enqueue, notify, load],
+  );
+
+  const updateStop = useCallback(
+    (placeId: string, meta: StopMeta) => {
+      const target = days[dayIdx];
+      if (!target) return;
+      const empty = !meta.note && !meta.stayMin && !meta.breakLabel && !meta.breakMin;
+      setDays((prev) =>
+        prev.map((d, i) => {
+          if (i !== dayIdx) return d;
+          const { [placeId]: _drop, ...rest } = d.stopMeta;
+          return { ...d, stopMeta: empty ? rest : { ...rest, [placeId]: meta } };
+        }),
+      );
+      enqueue(target.id, () => updateStopMetaRow(target.id, placeId, meta)).catch(() => {
+        notify('บันทึกรายละเอียดจุดแวะไม่สำเร็จ กรุณาลองอีกครั้ง');
+        load();
+      });
+    },
+    [days, dayIdx, enqueue, notify, load],
+  );
+
   // ---- วัน ----
   const addNewDay = useCallback(async () => {
     if (!trip) return;
@@ -245,7 +289,7 @@ export function useTripPlanner(tripId: string, places: Place[], notify: (message
       // วันใหม่เริ่มจากจุดส่งของวันก่อนหน้า (เช่น เช้าวันถัดไปรับที่โรงแรมเดิม)
       const startFrom = days.at(-1)?.end ?? null;
       const id = await addDayRow(trip.id, dayNo, startFrom);
-      setDays((prev) => [...prev, { id, dayNo, placeIds: [], start: startFrom, end: null, route: null }]);
+      setDays((prev) => [...prev, { id, dayNo, placeIds: [], title: null, startMin: null, startNote: null, endNote: null, stopMeta: {}, start: startFrom, end: null, route: null }]);
       setDayIdx(days.length);
     } catch {
       notify('เพิ่มวันไม่สำเร็จ กรุณาลองอีกครั้ง');
@@ -266,7 +310,7 @@ export function useTripPlanner(tripId: string, places: Place[], notify: (message
 
   // ---- ข้อมูลทริป / ลิงก์ลูกค้า ----
   const updateTrip = useCallback(
-    async (patch: Partial<Pick<Trip, 'name' | 'client_name' | 'pax' | 'start_date' | 'day_start_min'>>) => {
+    async (patch: Partial<Pick<Trip, 'name' | 'client_name' | 'pax' | 'start_date' | 'day_start_min' | 'subtitle' | 'lodging_note' | 'footer_note'>>) => {
       if (!trip) return;
       const before = trip;
       setTrip({ ...trip, ...patch });
@@ -334,6 +378,7 @@ export function useTripPlanner(tripId: string, places: Place[], notify: (message
     setDayIdx,
     dayPlaces,
     sched,
+    departMin,
     inTripIds,
     routeLoading,
     /** true = ระยะ/เวลามาจาก Google Routes ตามถนนจริง, false = ค่าประมาณ */
@@ -344,6 +389,6 @@ export function useTripPlanner(tripId: string, places: Place[], notify: (message
     allHitsCount: allHits.length,
     nearbyFilter,
     setNearbyFilter,
-    actions: { setEndpoints, autoFill, addPlace, removeStop, moveStop, autoOrder: runAutoOrder, addDay: addNewDay, deleteDay: removeDay, updateTrip, shareLink, revokeShareLink },
+    actions: { updateDayInfo, updateStop, setEndpoints, autoFill, addPlace, removeStop, moveStop, autoOrder: runAutoOrder, addDay: addNewDay, deleteDay: removeDay, updateTrip, shareLink, revokeShareLink },
   };
 }

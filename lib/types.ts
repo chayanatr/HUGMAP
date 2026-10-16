@@ -27,6 +27,20 @@ export interface Trip {
   start_date: string;          // ISO date
   day_start_min: number;       // 540 = 09:00
   share_token: string | null;
+  /** ข้อความประกอบตารางเดินทางลูกค้า */
+  subtitle: string | null;       // รถตู้ส่วนตัวพร้อมคนขับ 2 วัน 1 คืน
+  lodging_note: string | null;   // พักเมืองเฟือง 1 คืน
+  footer_note: string | null;
+}
+
+/** รายละเอียดของจุดแวะในวันหนึ่ง (ผูกตามสถานที่) */
+export interface StopMeta {
+  note: string | null;
+  /** เวลาอยู่ที่จุดนี้ (นาที) — null = ใช้เวลาแนะนำของสถานที่ */
+  stayMin: number | null;
+  /** พักหลังจุดนี้ เช่น รับประทานอาหารกลางวัน */
+  breakLabel: string | null;
+  breakMin: number | null;
 }
 
 /** จุดรับ/ส่งลูกค้าของวัน — ชื่อ + พิกัดอิสระ (ไม่ต้องอยู่ใน places) */
@@ -44,6 +58,11 @@ export interface ScheduledStop {
   waitMin: number;
   closesBeforeEnd: boolean;
   leg: Leg | null;
+  /** เวลาอยู่จริง (นาที) = stay_min หรือเวลาแนะนำของสถานที่ */
+  durationMin: number;
+  note: string | null;
+  breakLabel: string | null;
+  breakMin: number;
 }
 export interface Leg { km: number; min: number; walk: boolean }
 /** segment = แทรกหลังจุดแวะลำดับนี้ (-1 = ก่อนจุดแรก); between = ข้อความ "ช่วงจุดรับ–จุด 1" */

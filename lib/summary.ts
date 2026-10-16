@@ -1,13 +1,19 @@
 import { fmtThaiRange } from './format';
 import { nearbyAlongRoute, nearestSegment, placeHit, routePoints, schedule } from './geo';
 import type { DayData, TripData } from './trips';
-import type { Endpoint, Leg, NearbyHit, Place, ScheduledStop, Trip } from './types';
+import type { Endpoint, Leg, NearbyHit, Place, ScheduledStop, StopMeta, Trip } from './types';
 
 /** ข้อมูลหน้าสรุป — serializable (ส่งจาก server component ไป client ได้) */
 export interface SummaryDay {
   id: string;
   dayNo: number;
   places: Place[];
+  /** ชื่อวัน / เวลาออกเดินทาง (null = ใช้ของทริป) / หมายเหตุจุดรับ-ส่ง / รายละเอียดจุดแวะตาม place_id */
+  title: string | null;
+  startMin: number | null;
+  startNote: string | null;
+  endNote: string | null;
+  stopMeta: Record<string, StopMeta>;
   /** ระยะ/เวลาแต่ละช่วงจาก Google Routes (null = ใช้ค่าประมาณ) */
   legs: Leg[] | null;
   /** จุดรับ/ส่งลูกค้าของวัน */
@@ -59,6 +65,7 @@ export function buildSummaryData({
         : nearbyAlongRoute(pts, places, radiusKm, inTrip).map((h) => placeHit(h, n, !!d.start, !!d.end));
     return {
       id: d.id, dayNo: d.dayNo, places: dayPlaces, start: d.start, end: d.end,
+      title: d.title, startMin: d.startMin, startNote: d.startNote, endNote: d.endNote, stopMeta: d.stopMeta,
       startLeg: complete ? (d.route?.startLeg ?? null) : null,
       legs: complete ? (d.route?.legs ?? null) : null,
       line: d.route?.line ?? null, nearby,
@@ -74,13 +81,16 @@ export interface DayView extends SummaryDay {
   lastMin: number | null;
   /** เวลาถึงจุดส่ง (null = ไม่มีจุดส่ง) */
   arriveMin: number | null;
+  /** เวลาออกเดินทางของวัน (จุดรับ หรือจุดแวะแรก) */
+  departMin: number;
 }
 
 /** คำนวณตารางเวลารายวันและยอดรวม */
 export function summarize(data: SummaryData) {
   const days: DayView[] = data.days.map((d) => {
-    const s = schedule(d.places, data.trip.day_start_min, d.legs ?? undefined, { start: d.start, end: d.end, startLeg: d.startLeg });
-    return { ...d, stops: s.stops, km: s.km, travelMin: s.travelMin, firstMin: s.firstMin, lastMin: s.lastMin, startLeg: s.startLeg, arriveMin: s.arriveMin };
+    const departMin = d.startMin ?? data.trip.day_start_min;
+    const s = schedule(d.places, departMin, d.legs ?? undefined, { start: d.start, end: d.end, startLeg: d.startLeg, meta: d.stopMeta });
+    return { ...d, departMin, stops: s.stops, km: s.km, travelMin: s.travelMin, firstMin: s.firstMin, lastMin: s.lastMin, startLeg: s.startLeg, arriveMin: s.arriveMin };
   });
   return {
     days,

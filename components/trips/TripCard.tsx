@@ -1,9 +1,11 @@
 'use client';
+import { useState } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Icon } from '@/components/ui/Icon';
+import { Input } from '@/components/ui/Input';
 import { cn } from '@/lib/cn';
 import { fmtClock, fmtDuration, fmtKm } from '@/lib/geo';
-import { fmtThaiDate, splitUnit } from '@/lib/format';
+import { clockToMin, fmtThaiDate, splitUnit } from '@/lib/format';
 import type { DayData } from '@/lib/trips';
 import type { ScheduledStop, Trip } from '@/lib/types';
 
@@ -15,8 +17,10 @@ export function TripCard({
   dayIdx,
   sched,
   hasStart,
+  departMin,
   isRoad,
   routeLoading,
+  onDayInfo,
   onSelectDay,
   onAddDay,
   onDeleteDay,
@@ -28,8 +32,12 @@ export function TripCard({
   sched: Sched;
   /** มีจุดรับ → เวลาเริ่มคือเวลาออกจากจุดรับ ไม่ใช่เวลาถึงจุดแวะแรก */
   hasStart: boolean;
+  /** เวลาออกเดินทางของวันที่เลือก */
+  departMin: number;
   isRoad: boolean;
   routeLoading: boolean;
+  /** บันทึกชื่อวัน/เวลาออกเดินทาง (startMin null = ใช้เวลาเริ่มของทริป) */
+  onDayInfo: (patch: { title?: string | null; startMin?: number | null }) => void;
   onSelectDay: (i: number) => void;
   onAddDay: () => void;
   onDeleteDay: () => void;
@@ -82,7 +90,7 @@ export function TripCard({
             <div>
               <div className="text-label">เริ่ม</div>
               <div className="text-value tabular-nums">
-                {fmtThaiDate(trip.start_date, days[dayIdx]?.dayNo ? days[dayIdx].dayNo - 1 : 0)} · {fmtClock(hasStart ? trip.day_start_min : (sched.firstMin ?? trip.day_start_min))}
+                {fmtThaiDate(trip.start_date, days[dayIdx]?.dayNo ? days[dayIdx].dayNo - 1 : 0)} · {fmtClock(hasStart ? departMin : (sched.firstMin ?? departMin))}
               </div>
             </div>
             <div>
@@ -126,6 +134,39 @@ export function TripCard({
           </button>
         )}
       </div>
-    </Card>
+
+      {days[dayIdx] && <DayInfoRow key={days[dayIdx].id} day={days[dayIdx]} tripStartMin={trip.day_start_min} onChange={onDayInfo} />}    </Card>
+  );
+}
+
+/** ชื่อวัน + เวลาออกเดินทางของวันที่เลือก (แสดงในตารางเดินทางลูกค้า) — บันทึกเมื่อออกจากช่อง */
+function DayInfoRow({
+  day,
+  tripStartMin,
+  onChange,
+}: {
+  day: DayData;
+  tripStartMin: number;
+  onChange: (patch: { title?: string | null; startMin?: number | null }) => void;
+}) {
+  const [title, setTitle] = useState(day.title ?? '');
+  const startMin = day.startMin ?? tripStartMin;
+  return (
+    <div className="grid grid-cols-[minmax(0,1fr)_112px] items-end gap-2 border-t border-line px-4 py-3">
+      <Input
+        label={`ชื่อวันที่ ${day.dayNo} (ใช้ในตารางลูกค้า)`}
+        placeholder="เช่น วังเวียง–เมืองเฟือง"
+        maxLength={120}
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        onBlur={() => title.trim() !== (day.title ?? '') && onChange({ title: title.trim() || null })}
+      />
+      <Input
+        label="ออกเดินทาง"
+        type="time"
+        value={fmtClock(startMin)}
+        onChange={(e) => e.target.value && onChange({ startMin: clockToMin(e.target.value) })}
+      />
+    </div>
   );
 }

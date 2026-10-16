@@ -2,12 +2,20 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { RouteData } from './routes';
 import { toLeg } from './routes';
 import { supabase } from './supabase';
-import type { Endpoint, Trip } from './types';
+import type { Endpoint, StopMeta, Trip } from './types';
 
 export interface DayData {
   id: string;
   dayNo: number;
   placeIds: string[];
+  /** ชื่อวัน เช่น วังเวียง–เมืองเฟือง (ใช้ในตารางเดินทางลูกค้า) */
+  title: string | null;
+  /** เวลาออกเดินทางของวันนี้ (นาทีจากเที่ยงคืน) — null = ใช้เวลาเริ่มของทริป */
+  startMin: number | null;
+  startNote: string | null;
+  endNote: string | null;
+  /** รายละเอียดแต่ละจุดแวะ ตาม place_id (ไม่มีรายการ = ไม่ได้ตั้ง) */
+  stopMeta: Record<string, StopMeta>;
   /** จุดรับ/ส่งลูกค้าของวัน (null = ยังไม่ตั้ง) */
   start: Endpoint | null;
   end: Endpoint | null;
@@ -20,7 +28,7 @@ export interface TripData {
   days: DayData[];
 }
 
-const TRIP_COLUMNS = 'id,code,name,client_name,pax,start_date,day_start_min,share_token';
+const TRIP_COLUMNS = 'id,code,name,client_name,pax,start_date,day_start_min,share_token,subtitle,lodging_note,footer_note';
 
 /** TR-<พ.ศ.>-<เลข 3 หลัก> เช่น TR-2569-118 */
 const makeCode = () => `TR-${new Date().getFullYear() + 543}-${Math.floor(100 + Math.random() * 900)}`;
@@ -79,7 +87,7 @@ export async function loadDays(db: SupabaseClient, tripId: string): Promise<DayD
   const [daysRes, routesRes] = await Promise.all([
     db
       .from('trip_days')
-      .select('id,day_no,start_name,start_lat,start_lng,end_name,end_lat,end_lng,start_leg_km,start_leg_min,trip_stops(place_id,position,leg_km,leg_min)')
+      .select('id,day_no,title,start_min,start_note,end_note,start_name,start_lat,start_lng,end_name,end_lat,end_lng,start_leg_km,start_leg_min,trip_stops(place_id,position,leg_km,leg_min,note,stay_min,break_label,break_min)')
       .eq('trip_id', tripId)
       .order('day_no'),
     db.rpc('trip_day_routes', { p_trip: tripId }),
@@ -89,9 +97,13 @@ export async function loadDays(db: SupabaseClient, tripId: string): Promise<DayD
     ((routesRes.data ?? []) as { day_id: string; geojson: { type: 'LineString'; coordinates: [number, number][] } }[]).map((r) => [r.day_id, r.geojson]),
   );
 
-  type StopRow = { place_id: string; position: number; leg_km: number | null; leg_min: number | null };
+  type StopRow = {
+    place_id: string; position: number; leg_km: number | null; leg_min: number | null;
+    note: string | null; stay_min: number | null; break_label: string | null; break_min: number | null;
+  };
   type DayRow = {
     id: string; day_no: number; trip_stops: StopRow[];
+    title: string | null; start_min: number | null; start_note: string | null; end_note: string | null;
     start_name: string | null; start_lat: number | null; start_lng: number | null;
     end_name: string | null; end_lat: number | null; end_lng: number | null;
     start_leg_km: number | null; start_leg_min: number | null;
@@ -109,6 +121,15 @@ export async function loadDays(db: SupabaseClient, tripId: string): Promise<DayD
       id: d.id,
       dayNo: d.day_no,
       placeIds: stops.map((s) => s.place_id),
+      title: d.title,
+      startMin: d.start_min,
+      startNote: d.start_note,
+      endNote: d.end_note,
+      stopMeta: Object.fromEntries(
+        stops
+          .filter((s) => s.note || s.stay_min || s.break_label || s.break_min)
+          .map((s) => [s.place_id, { note: s.note, stayMin: s.stay_min, breakLabel: s.break_label, breakMin: s.break_min } satisfies StopMeta]),
+      ),
       start,
       end,
       route: cached
@@ -141,7 +162,10 @@ export async function createTrip(): Promise<Trip> {
   throw new Error('สร้างรหัสทริปไม่สำเร็จ');
 }
 
-export async function updateTrip(id: string, patch: Partial<Pick<Trip, 'name' | 'client_name' | 'pax' | 'start_date' | 'day_start_min' | 'share_token'>>) {
+export async function updateTrip(
+  id: string,
+  patch: Partial<Pick<Trip, 'name' | 'client_name' | 'pax' | 'start_date' | 'day_start_min' | 'share_token' | 'subtitle' | 'lodging_note' | 'footer_note'>>,
+) {
   const { error } = await supabase().from('trips').update(patch).eq('id', id);
   if (error) throw error;
 }
@@ -166,6 +190,25 @@ export async function setDayEndpoints(dayId: string, start: Endpoint | null, end
       route_geom: null, start_leg_km: null, start_leg_min: null,
     })
     .eq('id', dayId);
+  if (error) throw error;
+}
+
+/** ตั้ง/ล้างข้อมูลประกอบของวัน (ชื่อวัน เวลาออกเดินทาง หมายเหตุจุดรับ/ส่ง) — ไม่กระทบเส้นทาง */
+export async function updateDayInfo(dayId: string, info: Pick<DayData, 'title' | 'startMin' | 'startNote' | 'endNote'>) {
+  const { error } = await supabase()
+    .from('trip_days')
+    .update({ title: info.title, start_min: info.startMin, start_note: info.startNote, end_note: info.endNote })
+    .eq('id', dayId);
+  if (error) throw error;
+}
+
+/** ตั้งรายละเอียดของจุดแวะ (หมายเหตุ เวลาอยู่ พักหลังจุดนี้) — ไม่กระทบเส้นทาง */
+export async function updateStopMeta(dayId: string, placeId: string, meta: StopMeta) {
+  const { error } = await supabase()
+    .from('trip_stops')
+    .update({ note: meta.note, stay_min: meta.stayMin, break_label: meta.breakLabel, break_min: meta.breakMin })
+    .eq('day_id', dayId)
+    .eq('place_id', placeId);
   if (error) throw error;
 }
 

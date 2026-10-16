@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { PageShell, PanelBody, PanelHeader } from '@/components/shell/PageShell';
 import { AddPlaceSearch } from '@/components/trips/AddPlaceSearch';
 import { EndpointDialog, KIND_LABEL, type EndpointDraft, type EndpointKind } from '@/components/trips/EndpointDialog';
+import { StopDialog } from '@/components/trips/StopDialog';
 import { DesktopRouteCard, NearbyBar, NearbyPanelCard } from '@/components/trips/Nearby';
 import { StopList } from '@/components/trips/StopList';
 import { TripCard } from '@/components/trips/TripCard';
@@ -25,16 +26,18 @@ export default function TripPlannerPage({ params }: { params: { id: string } }) 
   const toast = useToast();
   const { places, status: placesStatus } = usePlaces();
   const planner = useTripPlanner(params.id, places, toast);
-  const { status, trip, days, day, dayIdx, dayPlaces, sched, hits, radiusKm, actions } = planner;
+  const { status, trip, days, day, dayIdx, dayPlaces, sched, departMin, hits, radiusKm, actions } = planner;
+  const [editStopId, setEditStopId] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   // แก้ไขจุดรับ/ส่ง: draft อยู่ที่หน้านี้เพราะ "แตะบนแผนที่" ต้องปิดกล่องชั่วคราว
   const [ep, setEp] = useState<{ kind: EndpointKind; draft: EndpointDraft; picking: boolean } | null>(null);
   const openEndpoint = (kind: EndpointKind) => {
     const cur = kind === 'start' ? day?.start : day?.end;
-    setEp({ kind, draft: cur ? { ...cur } : { name: '', lat: null, lng: null }, picking: false });
+    const note = (kind === 'start' ? day?.startNote : day?.endNote) ?? '';
+    setEp({ kind, draft: cur ? { ...cur, note } : { name: '', lat: null, lng: null, note }, picking: false });
   };
   const pickOnMap = (lat: number, lng: number) =>
-    setEp((cur) => (cur?.picking ? { ...cur, picking: false, draft: { name: cur.draft.name.trim() || KIND_LABEL[cur.kind], lat, lng } } : cur));
+    setEp((cur) => (cur?.picking ? { ...cur, picking: false, draft: { ...cur.draft, name: cur.draft.name.trim() || KIND_LABEL[cur.kind], lat, lng } } : cur));
 
   // /trips/current → แสดง id จริงใน URL โดยไม่โหลดหน้าใหม่; ยังไม่มีทริปเลย → ไปหน้ารายการทริปเพื่อสร้าง
   useEffect(() => {
@@ -100,6 +103,8 @@ export default function TripPlannerPage({ params }: { params: { id: string } }) 
                   dayIdx={dayIdx}
                   sched={sched}
                   hasStart={!!day.start}
+                  departMin={departMin}
+                  onDayInfo={actions.updateDayInfo}
                   isRoad={planner.isRoad}
                   routeLoading={planner.routeLoading}
                   onSelectDay={planner.setDayIdx}
@@ -134,9 +139,10 @@ export default function TripPlannerPage({ params }: { params: { id: string } }) 
                   start={day.start}
                   end={day.end}
                   startLeg={sched.startLeg}
-                  departMin={trip.day_start_min}
+                  departMin={departMin}
                   arriveMin={sched.arriveMin}
                   onEditEndpoint={openEndpoint}
+                  onEditStop={setEditStopId}
                   onMove={actions.moveStop}
                   onRemove={actions.removeStop}
                   onAddNearby={(h, at) => actions.addPlace(h.place, at)}
@@ -159,15 +165,26 @@ export default function TripPlannerPage({ params }: { params: { id: string } }) 
               places={places}
               onChange={(draft) => setEp((cur) => cur && { ...cur, draft })}
               onPickOnMap={() => setEp((cur) => cur && { ...cur, picking: true })}
-              onSave={(e) => {
+              onSave={(e, note) => {
                 actions.setEndpoints(ep.kind, e);
+                actions.updateDayInfo(ep.kind === 'start' ? { startNote: note } : { endNote: note });
                 setEp(null);
               }}
               onClear={() => {
                 actions.setEndpoints(ep.kind, null);
+                actions.updateDayInfo(ep.kind === 'start' ? { startNote: null } : { endNote: null });
                 setEp(null);
               }}
               onClose={() => setEp((cur) => (cur?.picking ? cur : null))}
+            />
+          )}
+          {day && (
+            <StopDialog
+              open={!!editStopId}
+              place={dayPlaces.find((p) => p.id === editStopId) ?? null}
+              meta={editStopId ? day.stopMeta[editStopId] : undefined}
+              onSave={(meta) => editStopId && actions.updateStop(editStopId, meta)}
+              onClose={() => setEditStopId(null)}
             />
           )}
           {trip && (

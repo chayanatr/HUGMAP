@@ -29,6 +29,7 @@ export function StopList({
   departMin,
   arriveMin,
   onEditEndpoint,
+  onEditStop,
   onMove,
   onRemove,
   onAddNearby,
@@ -42,6 +43,8 @@ export function StopList({
   departMin: number;
   arriveMin: number | null;
   onEditEndpoint: (kind: EndpointKind) => void;
+  /** แก้รายละเอียดจุดแวะ (คำอธิบาย เวลาอยู่ พักหลังจุดนี้) */
+  onEditStop: (placeId: string) => void;
   onMove: (from: number, to: number) => void;
   onRemove: (index: number) => void;
   onAddNearby: (hit: NearbyHit, atIndex: number) => void;
@@ -76,7 +79,7 @@ export function StopList({
             const last = i === stops.length - 1;
             return (
               <Fragment key={s.place.id}>
-                <SortableStop stop={s} total={stops.length} onRemove={() => onRemove(i)} onMoveUp={() => onMove(i, i - 1)} />
+                <SortableStop stop={s} total={stops.length} onEdit={() => onEditStop(s.place.id)} onRemove={() => onRemove(i)} onMoveUp={() => onMove(i, i - 1)} />
                 {s.leg && <LegRow leg={s.leg} label={last ? 'ไปจุดส่ง' : 'ไปจุดถัดไป'} hint={hint} onAdd={(h) => onAddNearby(h, i + 1)} />}
               </Fragment>
             );
@@ -88,7 +91,7 @@ export function StopList({
   );
 }
 
-function SortableStop({ stop, total, onRemove, onMoveUp }: { stop: ScheduledStop; total: number; onRemove: () => void; onMoveUp: () => void }) {
+function SortableStop({ stop, total, onEdit, onRemove, onMoveUp }: { stop: ScheduledStop; total: number; onEdit: () => void; onRemove: () => void; onMoveUp: () => void }) {
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging, isOver } = useSortable({ id: stop.place.id });
   const { place, index } = stop;
   const c = useCategories().cat(place.category);
@@ -126,6 +129,22 @@ function SortableStop({ stop, total, onRemove, onMoveUp }: { stop: ScheduledStop
             </Pill>
           )}
         </div>
+        {(stop.breakLabel || stop.note) && (
+          <div className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[12px] text-brand-hover">
+            {stop.breakLabel && (
+              <span className="inline-flex items-center gap-0.5">
+                <Icon name="restaurant" className="text-[14px]" />
+                {stop.breakLabel} {fmtDuration(stop.breakMin)}
+              </span>
+            )}
+            {stop.note && (
+              <span className="inline-flex items-center gap-0.5">
+                <Icon name="notes" className="text-[14px]" />
+                มีคำอธิบาย
+              </span>
+            )}
+          </div>
+        )}
         {stop.closesBeforeEnd && close != null && <div className="mt-0.5 text-[12px] text-danger-text">ปิด {fmtClock(close)} ก่อนเวลาออก</div>}
       </div>
       <div className="shrink-0 text-right">
@@ -152,6 +171,15 @@ function SortableStop({ stop, total, onRemove, onMoveUp }: { stop: ScheduledStop
           className="hidden h-8 w-6 cursor-grab touch-none place-items-center rounded-pill text-label hover:text-muted focus-visible:outline-none focus-visible:shadow-focus active:cursor-grabbing md:grid"
         >
           <Icon name="drag_indicator" className="text-[20px]" />
+        </button>
+        <button
+          type="button"
+          onClick={onEdit}
+          aria-label={`แก้ไขรายละเอียด ${place.name}`}
+          title="รายละเอียด / พักหลังจุดนี้"
+          className="grid h-11 w-11 place-items-center rounded-input text-label hover:text-brand focus-visible:outline-none focus-visible:shadow-focus md:h-8 md:w-8"
+        >
+          <Icon name="edit_note" className="text-[20px]" />
         </button>
         <button
           type="button"
