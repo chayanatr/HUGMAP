@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { LogoStamper } from '@/components/summary/LogoStamper';
 import { Button } from '@/components/ui/Button';
 import { Icon } from '@/components/ui/Icon';
 import { useToast } from '@/components/ui/Toast';
@@ -89,9 +90,9 @@ export function PromoDialog({ data, open, onClose }: { data: SummaryData; open: 
         </label>
 
         <ol className="list-decimal space-y-1 pl-5 text-[13px] leading-[1.6] text-muted">
-          <li>กด “คัดลอกและเปิด ChatGPT” แล้ววางพรอมต์ในช่องข้อความ</li>
-          <li>แนบไฟล์โลโก้ HUGLAO (ปุ่มด้านล่าง) ถ้าต้องการให้ใช้โลโก้จริง</li>
+          <li>กด “คัดลอกและเปิด ChatGPT” แล้ววางพรอมต์ในช่องข้อความ (พรอมต์สั่งให้เว้นที่ว่างด้านบนกลางภาพไว้สำหรับโลโก้)</li>
           <li>ตรวจชื่อสถานที่และเวลาในภาพทุกตัวอักษรก่อนส่งลูกค้า เพราะ AI อาจสะกดผิด ถ้าผิดให้พิมพ์สั่งแก้</li>
+          <li>บันทึกภาพ แล้วใส่โลโก้ HUGLAO ตัวจริงด้วยเครื่องมือด้านล่าง (ทางเลือก: แนบไฟล์โลโก้ให้ ChatGPT วางเองก็ได้ แต่ AI อาจวาดโลโก้เพี้ยน)</li>
         </ol>
 
         <div className="flex flex-wrap items-center gap-2">
@@ -110,6 +111,8 @@ export function PromoDialog({ data, open, onClose }: { data: SummaryData; open: 
             ดาวน์โหลดโลโก้
           </a>
         </div>
+
+        <LogoStamper />
       </div>
     </dialog>
   );
