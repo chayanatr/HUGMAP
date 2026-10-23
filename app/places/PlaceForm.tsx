@@ -4,7 +4,7 @@ import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { MapSearch } from '@/components/MapSearch';
-import { guessCategoryFromGoogle, type PickedLocation } from '@/lib/placesSearch';
+import { guessCategoryFromGoogle, resolvePlaceId, type PickedLocation } from '@/lib/placesSearch';
 import { PageShell, PanelBody, PanelHeader } from '@/components/shell/PageShell';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -133,6 +133,7 @@ export default function PlaceForm({ placeId }: { placeId?: string }) {
       category: /^[a-z0-9_]{2,32}$/.test(q.get('cat') ?? '') ? (q.get('cat') as string) : f.category,
     }));
     if (PROVINCES.some((p) => p.key === q.get('province'))) resolvedKey.current = coordKey(lat, lng);
+    if (q.get('name')) nameAuto.current = true; // ชื่อมาจาก Google (ผู้ดูแลแก้ได้)
     setTarget({ lat, lng, zoom: 17, key: 0 });
   }, [editing]);
 
@@ -140,6 +141,14 @@ export default function PlaceForm({ placeId }: { placeId?: string }) {
   // (ไม่ทับถ้าผู้ใช้แก้แขวง/เมืองเองหลังจากนั้น; เปิดแก้ไขสถานที่เดิมจะไม่ทับค่าที่บันทึกไว้จนกว่าจะย้ายตำแหน่ง)
   const resolvedKey = useRef('');
   const regionTouched = useRef(false);
+  // ชื่อที่ระบบเติมจาก Google (ยังไม่ถูกผู้ใช้แก้) → คลิกสถานที่ใหม่แล้วแทนที่ได้ ส่วนชื่อที่ผู้ใช้พิมพ์เองจะไม่ถูกทับ
+  const nameAuto = useRef(false);
+  const nameRef = useRef('');
+  nameRef.current = form.name;
+  const latRef = useRef('');
+  const lngRef = useRef('');
+  latRef.current = form.lat;
+  lngRef.current = form.lng;
   const editInitDone = useRef(false);
   const [regionNote, setRegionNote] = useState('');
   useEffect(() => {
@@ -159,8 +168,20 @@ export default function PlaceForm({ placeId }: { placeId?: string }) {
       resolvedKey.current = key;
       setForm((f) => (coordKey(parseFloat(f.lat), parseFloat(f.lng)) === key ? { ...f, province: r.province, district: r.district ?? '' } : f));
       setRegionNote(r.estimated ? 'คาดจากตำแหน่งบนแผนที่ — กรุณาตรวจสอบ' : 'ตรงกับตำแหน่งบนแผนที่ (ตรวจพบอัตโนมัติ)');
+      // คลิกโดนสถานที่ที่มีชื่อบน Google → เติมชื่อ/ที่อยู่/หมวดให้ (ชื่อที่ผู้ใช้พิมพ์เองไม่ถูกทับ)
+      if (r.poiPlaceId && (!nameRef.current.trim() || nameAuto.current)) {
+        try {
+          const loc = await resolvePlaceId(r.poiPlaceId);
+          const same = coordKey(parseFloat(latRef.current), parseFloat(lngRef.current)) === key;
+          if (same && (!nameRef.current.trim() || nameAuto.current)) fillName(loc);
+        } catch {
+          // ดึงชื่อไม่ได้ = ปล่อยให้ผู้ใช้พิมพ์เอง
+        }
+      }
     }, 700);
     return () => clearTimeout(t);
+    // fillName ใช้เฉพาะ ref/setForm จึงไม่ต้องอยู่ใน deps (ใส่แล้วจะค้นหาซ้ำทุกครั้งที่ re-render)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.lat, form.lng, loadState, editing]);
 
   useEffect(() => () => newPhotos.forEach((p) => URL.revokeObjectURL(p.preview)), [newPhotos]);
@@ -172,14 +193,38 @@ export default function PlaceForm({ placeId }: { placeId?: string }) {
   const pin = Number.isFinite(latN) && Number.isFinite(lngN) ? { lat: latN, lng: lngN } : null;
   const contextPlaces = useMemo(() => places.filter((p) => p.id !== placeId), [places, placeId]);
 
-  const pick = (lat: number, lng: number) => {
+  // เติมเฉพาะชื่อ/ที่อยู่/หมวดจากสถานที่ Google ที่พบตรงจุดที่คลิก (ไม่ย้ายพิกัด)
+  const fillName = (loc: PickedLocation) => {
+    const guessed = guessCategoryFromGoogle(loc.types);
+    nameAuto.current = true;
+    setForm((f) => ({
+      ...f,
+      name: loc.name,
+      desc: f.desc.trim() ? f.desc : loc.address,
+      category: guessed && categories.some((c) => c.key === guessed) ? guessed : f.category,
+    }));
+    toast(`เติมชื่อ “${loc.name}” จาก Google แล้ว แก้ไขได้`);
+  };
+
+  // คลิกแผนที่: ตั้งพิกัด; ถ้าคลิกโดนสถานที่ของ Google (placeId) ดึงชื่อ/ที่อยู่/แขวง/หมวดมาเติม และใช้พิกัดจริงของสถานที่นั้น
+  const pick = (lat: number, lng: number, placeId?: string) => {
     regionTouched.current = false; // ย้ายตำแหน่งใหม่ → ให้ระบบหาแขวง/เมืองใหม่
     setForm((f) => ({ ...f, lat: lat.toFixed(6), lng: lng.toFixed(6) }));
+    if (placeId)
+      resolvePlaceId(placeId)
+        .then((loc) => applyGoogle(loc, 'auto'))
+        .catch(() => {
+          // ดึงข้อมูลจาก Google ไม่ได้ = ใช้พิกัดที่คลิก กรอกชื่อเอง
+        });
   };
 
   // เติมข้อมูลจากสถานที่ที่เลือกบน Google: พิกัด + (ชื่อ/เมือง/หมวดที่เดา) + ที่อยู่ในรายละเอียด
   // overwrite = เลือกจากช่องค้นหา "จาก Google" ในฟอร์ม → แทนที่ชื่อเดิม; ช่องค้นหาบนแผนที่เติมชื่อเฉพาะเมื่อยังว่าง
-  const applyGoogle = (loc: PickedLocation, overwrite: boolean) => {
+  // overwrite: true = แทนที่ชื่อเสมอ · 'auto' = แทนที่เมื่อชื่อว่างหรือเป็นชื่อที่ระบบเติมเอง · false = เติมเมื่อว่างเท่านั้น
+  const applyGoogle = (loc: PickedLocation, overwrite: boolean | 'auto') => {
+    const hasName = !!nameRef.current.trim();
+    const keepNameNow = overwrite === true ? false : overwrite === 'auto' ? hasName && !nameAuto.current : hasName;
+    if (!keepNameNow) nameAuto.current = true;
     const guessed = guessCategoryFromGoogle(loc.types);
     // แขวง/เมืองจากที่อยู่ของ Google ตรงกับแผนที่; ถ้า Google ไม่ระบุแขวง ให้ useEffect ด้านบนหาจากพิกัด
     regionTouched.current = false;
@@ -188,7 +233,7 @@ export default function PlaceForm({ placeId }: { placeId?: string }) {
       setRegionNote('ตรงกับตำแหน่งบนแผนที่ (จาก Google)');
     }
     setForm((f) => {
-      const keepName = !overwrite && !!f.name.trim();
+      const keepName = keepNameNow;
       return {
         ...f,
         name: keepName ? f.name : loc.name,
@@ -201,7 +246,8 @@ export default function PlaceForm({ placeId }: { placeId?: string }) {
       };
     });
     setTarget({ lat: loc.lat, lng: loc.lng, zoom: 17, key: Date.now() });
-    if (overwrite) toast('เติมข้อมูลจาก Google แล้ว กรุณาตรวจชื่อ หมวด และรายละเอียดก่อนบันทึก');
+    if (overwrite === true) toast('เติมข้อมูลจาก Google แล้ว กรุณาตรวจชื่อ หมวด และรายละเอียดก่อนบันทึก');
+    else if (!keepNameNow) toast(`เติมชื่อ “${loc.name}” จาก Google แล้ว แก้ไขได้`);
   };
 
   // ใช้ตำแหน่งปัจจุบัน (GPS) เป็นพิกัดสถานที่ — เหมาะเมื่อพนักงานยืนอยู่ที่สถานที่นั้น
@@ -329,7 +375,17 @@ export default function PlaceForm({ placeId }: { placeId?: string }) {
               <span className="text-label">เติมชื่อ พิกัด เมือง ที่อยู่ และเดาหมวดให้ แก้ไขได้ก่อนบันทึก</span>
             </div>
           )}
-          <Input label="ชื่อสถานที่" required placeholder="เช่น วัดเชียงทอง" value={form.name} onChange={(e) => set('name', e.target.value)} error={errors.name} />
+          <Input
+            label="ชื่อสถานที่"
+            required
+            placeholder="คลิกสถานที่บนแผนที่เพื่อเติมชื่อจาก Google หรือพิมพ์เอง"
+            value={form.name}
+            onChange={(e) => {
+              nameAuto.current = false; // ผู้ใช้แก้ชื่อเอง → คลิกแผนที่ครั้งต่อไปไม่ทับ
+              set('name', e.target.value);
+            }}
+            error={errors.name}
+          />
           <div className="flex flex-col gap-1.5">
             <div className="flex items-center justify-between gap-2">
               <span className="text-[12px] font-medium text-muted">หมวด *</span>
@@ -543,7 +599,7 @@ export default function PlaceForm({ placeId }: { placeId?: string }) {
           )}
           <MapSearch
             className="absolute left-3 top-3 z-[1000] w-[calc(100%-4.75rem)] md:w-[360px]"
-            onPickGoogle={(loc) => applyGoogle(loc, false)}
+            onPickGoogle={(loc) => applyGoogle(loc, 'auto')}
           />
           <div className="pointer-events-none absolute left-4 top-[68px] z-[1000] flex max-w-[calc(100%-5.5rem)] items-center gap-2 rounded-item bg-brand-deep px-3.5 py-2.5 text-[13px] leading-snug text-white shadow-overlay">
             <Icon name="touch_app" className="shrink-0 text-[18px] text-brand-mint" />
