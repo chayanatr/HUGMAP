@@ -1,6 +1,7 @@
 'use client';
 import Image from 'next/image';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
+import { PromoDialog } from '@/components/summary/PromoDialog';
 import { CategoryTile } from '@/components/places/PlaceCard';
 import { LazyMap } from '@/components/summary/LazyMap';
 import { Button } from '@/components/ui/Button';
@@ -38,6 +39,7 @@ export function SummaryView({
   onAddNearby?: (dayId: string, hit: NearbyHit, atIndex: number) => void;
 }) {
   const toast = useToast();
+  const [promoOpen, setPromoOpen] = useState(false);
   const s = useMemo(() => summarize(data), [data]);
   const it = useMemo(() => buildItinerary(data), [data]);
   const { trip } = data;
@@ -82,6 +84,9 @@ export function SummaryView({
                 </Button>
                 <Button variant="outline" icon="link" onClick={onCopyLink} className="md:!h-10 !text-[13px]">
                   คัดลอกลิงก์ลูกค้า
+                </Button>
+                <Button variant="outline" icon="auto_awesome" onClick={() => setPromoOpen(true)} className="md:!h-10 !text-[13px]">
+                  สร้างภาพโปรโมท (ChatGPT)
                 </Button>
                 {trip.share_token && onRevokeLink && (
                   <Button variant="outline" icon="link_off" onClick={onRevokeLink} className="md:!h-10 !text-[13px] !text-danger-text">
@@ -140,6 +145,7 @@ export function SummaryView({
       )}
 
       <p className="text-[12px] leading-[1.6] text-placeholder">เวลาเดินทางเป็นค่าประมาณ อาจเปลี่ยนตามสภาพถนนและการจราจร{staff ? ' · แผนที่ © Google' : ''}</p>
+      {staff && <PromoDialog data={data} open={promoOpen} onClose={() => setPromoOpen(false)} />}
     </div>
   );
 }
