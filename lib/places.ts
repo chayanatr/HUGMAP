@@ -5,9 +5,10 @@ const BUCKET = 'place-photos';
 export const PLACE_COLUMNS = 'id,name,category,province,district,lat,lng,open_hours,fee,duration_min,description,photos';
 const COLUMNS = PLACE_COLUMNS;
 
-export const PHOTO_MAX_BYTES = 5 * 1024 * 1024;
+/** ไฟล์ต้นฉบับต่อรูป (รูปที่ใหญ่กว่า 1.5 MB จะถูกย่อก่อนอัปโหลด — lib/images.ts) และจำนวนรูปต่อสถานที่ */
+export const PHOTO_MAX_BYTES = 15 * 1024 * 1024;
 export const PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
-export const PHOTO_MAX_COUNT = 5;
+export const PHOTO_MAX_COUNT = 10;
 
 export interface PlaceInput {
   name: string;
