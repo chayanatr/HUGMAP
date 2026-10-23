@@ -21,6 +21,7 @@ import { PROVINCES } from '@/lib/provinces';
 import { createCategory } from '@/lib/categoriesApi';
 import { cn } from '@/lib/cn';
 import { fixMessage, geoErrorMessage, getMyPosition } from '@/lib/geolocation';
+import { prepareImage } from '@/lib/images';
 import {
   PHOTO_MAX_BYTES,
   PHOTO_MAX_COUNT,
@@ -218,20 +219,27 @@ export default function PlaceForm({ placeId }: { placeId?: string }) {
     }
   }
 
-  const addPhotos = (list: FileList | null) => {
-    if (!list) return;
+  const [preparing, setPreparing] = useState(false);
+  const addPhotos = async (list: FileList | null) => {
+    if (!list || preparing) return;
     let err = '';
     const next = [...newPhotos];
-    for (const file of Array.from(list)) {
-      if (!PHOTO_TYPES.includes(file.type) || file.size > PHOTO_MAX_BYTES) {
-        err = 'ไฟล์ต้องเป็น JPG, PNG หรือ WebP ขนาดไม่เกิน 5 MB';
-        continue;
+    setPreparing(true);
+    try {
+      for (const file of Array.from(list)) {
+        if (!PHOTO_TYPES.includes(file.type) || file.size > PHOTO_MAX_BYTES) {
+          err = `ไฟล์ต้องเป็น JPG, PNG หรือ WebP ขนาดไม่เกิน ${PHOTO_MAX_BYTES / 1024 / 1024} MB ต่อรูป`;
+          continue;
+        }
+        if (savedPhotos.length + next.length >= PHOTO_MAX_COUNT) {
+          err = `แนบรูปได้สูงสุด ${PHOTO_MAX_COUNT} รูปต่อสถานที่`;
+          break;
+        }
+        const ready = await prepareImage(file); // ย่อรูปใหญ่ให้เล็กลงก่อนอัปโหลด
+        next.push({ file: ready, preview: URL.createObjectURL(ready) });
       }
-      if (savedPhotos.length + next.length >= PHOTO_MAX_COUNT) {
-        err = `แนบรูปได้สูงสุด ${PHOTO_MAX_COUNT} รูป`;
-        break;
-      }
-      next.push({ file, preview: URL.createObjectURL(file) });
+    } finally {
+      setPreparing(false);
     }
     setPhotoError(err);
     setNewPhotos(next);
@@ -450,12 +458,15 @@ export default function PlaceForm({ placeId }: { placeId?: string }) {
             )}
             <label className="flex min-h-[88px] cursor-pointer flex-col items-center justify-center gap-1 rounded-item border border-dashed border-line-dashsoft px-3 py-4 text-center text-[13px] text-muted hover:bg-bg">
               <Icon name="add_photo_alternate" className="text-[26px] text-brand" />
-              เพิ่มรูปภาพ
-              <span className="text-[11px] text-label">JPG, PNG หรือ WebP ไม่เกิน 5 MB · สูงสุด {PHOTO_MAX_COUNT} รูป</span>
+              {preparing ? 'กำลังเตรียมรูป…' : 'เพิ่มรูปภาพ'}
+              <span className="text-[11px] text-label">
+                JPG, PNG หรือ WebP ไม่เกิน {PHOTO_MAX_BYTES / 1024 / 1024} MB ต่อรูป · {savedPhotos.length + newPhotos.length}/{PHOTO_MAX_COUNT} รูป · รูปใหญ่จะถูกย่ออัตโนมัติ
+              </span>
               <input
                 type="file"
                 accept={PHOTO_TYPES.join(',')}
                 multiple
+                disabled={preparing || savedPhotos.length + newPhotos.length >= PHOTO_MAX_COUNT}
                 className="sr-only"
                 onChange={(e) => {
                   addPhotos(e.target.files);
