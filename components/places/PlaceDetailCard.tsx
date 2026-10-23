@@ -10,7 +10,20 @@ import { fmtDuration } from '@/lib/geo';
 import type { Place } from '@/lib/types';
 
 /** การ์ดลอยเขียวเข้มมุมขวาล่างของแผนที่ (mobile เต็มกว้าง) */
-export function PlaceDetailCard({ place, onClose, canEdit, tripAction }: { place: Place; onClose: () => void; canEdit?: boolean; tripAction?: ReactNode }) {
+export function PlaceDetailCard({
+  place,
+  onClose,
+  canEdit,
+  onEdit,
+  tripAction,
+}: {
+  place: Place;
+  onClose: () => void;
+  canEdit?: boolean;
+  /** กดแล้วเปิดฟอร์มแก้ไขบนหน้านี้ (ไม่ส่ง = ลิงก์ไปฟอร์มเต็ม) */
+  onEdit?: () => void;
+  tripAction?: ReactNode;
+}) {
   const c = useCategories().cat(place.category);
   const [galleryOpen, setGalleryOpen] = useState(false);
   const info = [
@@ -21,7 +34,7 @@ export function PlaceDetailCard({ place, onClose, canEdit, tripAction }: { place
     .filter(Boolean)
     .join(' · ');
   return (
-    <DarkCard className="absolute bottom-5 right-4 z-[1000] flex w-[340px] flex-col gap-3 max-md:left-4 max-md:w-auto">
+    <DarkCard className="absolute bottom-5 right-4 z-[1000] flex w-[340px] flex-col gap-3 max-md:bottom-[104px] max-md:left-4 max-md:w-auto">
       <div className="flex gap-3">
         {place.photos[0] ? (
           <button
@@ -60,11 +73,16 @@ export function PlaceDetailCard({ place, onClose, canEdit, tripAction }: { place
       <div className="rounded-input bg-dark-field px-3 py-2 text-[12px] leading-[1.6]">{info}</div>
       {place.description && <p className="line-clamp-3 text-[13px] leading-[1.6] text-dark-soft">{place.description}</p>}
       <div className="flex gap-2">
-        {canEdit && (
-          <Button variant="dark-outline" icon="edit" href={`/places/${place.id}/edit`}>
-            แก้ไข
-          </Button>
-        )}
+        {canEdit &&
+          (onEdit ? (
+            <Button variant="dark-outline" icon="edit" onClick={onEdit}>
+              แก้ไข
+            </Button>
+          ) : (
+            <Button variant="dark-outline" icon="edit" href={`/places/${place.id}/edit`}>
+              แก้ไข
+            </Button>
+          ))}
         {tripAction}
       </div>
       {place.photos.length > 0 && <PhotoGallery photos={place.photos} name={place.name} open={galleryOpen} onClose={() => setGalleryOpen(false)} />}

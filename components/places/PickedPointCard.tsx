@@ -38,16 +38,19 @@ export function PickedPointCard({
   point,
   canAdd,
   nearest,
+  onAdd,
   onClose,
 }: {
   point: PickedPoint;
   canAdd: boolean;
   /** สถานที่ที่บันทึกไว้ใกล้ที่สุด (กันเพิ่มซ้ำ) */
   nearest?: { name: string; km: number } | null;
+  /** กดแล้วเปิดฟอร์มเพิ่มสถานที่ (กรอกรายละเอียดบนหน้านี้) */
+  onAdd: () => void;
   onClose: () => void;
 }) {
   return (
-    <div className="absolute inset-x-3 bottom-5 z-[1000] flex flex-col gap-3 rounded-card bg-surface p-3.5 shadow-dropdown md:inset-x-auto md:left-4 md:w-[340px]">
+    <div className="absolute inset-x-3 bottom-5 z-[1000] max-md:bottom-[104px] flex flex-col gap-3 rounded-card bg-surface p-3.5 shadow-dropdown md:inset-x-auto md:left-4 md:w-[340px]">
       <div className="flex items-start gap-2">
         <Icon name="location_on" className="mt-0.5 shrink-0 text-[22px] text-brand" />
         <div className="min-w-0 flex-1">
@@ -63,8 +66,8 @@ export function PickedPointCard({
         <IconButton icon="close" label="ปิด" onClick={onClose} className="!h-11 !w-11 border-0" />
       </div>
       {canAdd ? (
-        <Button href={newPlaceHref(point)} icon="add_location_alt" className="w-full">
-          เพิ่มเป็นสถานที่ที่นี่
+        <Button onClick={onAdd} icon="add_location_alt" className="w-full">
+          เพิ่มสถานที่ที่นี่
         </Button>
       ) : (
         <p className="text-[12px] leading-[1.5] text-placeholder">การเพิ่มสถานที่เป็นสิทธิ์ของผู้ดูแลระบบ</p>

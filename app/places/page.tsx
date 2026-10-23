@@ -8,17 +8,20 @@ import { SearchField } from '@/components/shell/SearchField';
 import { PlaceCard } from '@/components/places/PlaceCard';
 import { PlaceDetailCard } from '@/components/places/PlaceDetailCard';
 import { PlaceFilters } from '@/components/places/PlaceFilters';
-import { PickedPointCard, nearestSaved, type PickedPoint } from '@/components/places/PickedPointCard';
+import { PickedPointCard, nearestSaved, newPlaceHref, type PickedPoint } from '@/components/places/PickedPointCard';
+import { QuickPlaceDialog, type QuickPlaceInit } from '@/components/places/QuickPlaceDialog';
+import { useCategories } from '@/components/CategoriesProvider';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Icon } from '@/components/ui/Icon';
 import { IconButton } from '@/components/ui/IconButton';
 import { useToast } from '@/components/ui/Toast';
 import { useAuth } from '@/lib/auth';
-import { resolvePlaceId } from '@/lib/placesSearch';
+import { cn } from '@/lib/cn';
+import { guessCategoryFromGoogle, resolvePlaceId } from '@/lib/placesSearch';
 import { useCurrentTrip } from '@/lib/useCurrentTrip';
 import { usePlaces } from '@/lib/usePlaces';
-import type { CategoryKey } from '@/lib/types';
+import type { CategoryKey, Place } from '@/lib/types';
 
 const MapView = dynamic(() => import('@/components/MapView'), { ssr: false });
 
@@ -37,10 +40,44 @@ export default function PlacesPage() {
   const pickSeq = useRef(0);
   // สั่งช่องค้นหาบนแผนที่ (Google) จากช่องค้นหาในรายการ
   const [searchRequest, setSearchRequest] = useState<{ text: string; key: number } | null>(null);
-  const searchOnGoogle = (text: string) => {
-    setSearchRequest({ text, key: Date.now() });
-    if (window.matchMedia('(max-width: 639px)').matches) document.querySelector('main')?.scrollTo({ top: 0, behavior: 'smooth' });
+  const searchOnGoogle = (text: string) => setSearchRequest({ text, key: Date.now() });
+
+  // เพิ่ม/แก้ไขสถานที่แบบเร็วบนหน้านี้ (กดปุ่มที่การ์ด → ฟอร์มกรอกรายละเอียดเปิดขึ้นทันที)
+  const { list: categories } = useCategories();
+  const [quick, setQuick] = useState<QuickPlaceInit | null>(null);
+  const openAdd = () => {
+    if (!picked) return;
+    const guessed = picked.types ? guessCategoryFromGoogle(picked.types) : null;
+    setQuick({
+      name: picked.name ?? '',
+      category: guessed && categories.some((c) => c.key === guessed) ? guessed : (categories[0]?.key ?? 'temple'),
+      province: picked.province ?? '',
+      district: picked.district ?? '',
+      lat: picked.lat,
+      lng: picked.lng,
+      open: '',
+      fee: '',
+      duration: '30',
+      desc: picked.address ?? '',
+      fullFormHref: newPlaceHref(picked),
+    });
   };
+  const openEdit = (p: Place) =>
+    setQuick({
+      id: p.id,
+      photos: p.photos,
+      name: p.name,
+      category: p.category,
+      province: p.province,
+      district: p.district ?? '',
+      lat: p.lat,
+      lng: p.lng,
+      open: p.open_hours ?? '',
+      fee: p.fee ?? '',
+      duration: String(p.duration_min),
+      desc: p.description ?? '',
+      fullFormHref: `/places/${p.id}/edit`,
+    });
 
   const pickPoint = (lat: number, lng: number, placeId?: string) => {
     const seq = ++pickSeq.current;
@@ -72,22 +109,28 @@ export default function PlacesPage() {
     if (selectedId) document.getElementById(`place-${selectedId}`)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   }, [selectedId]);
 
-  // mobile: แผนที่อยู่บนสุดของหน้า — เลือกจากรายการแล้วเลื่อนกลับขึ้นไปดูการ์ด
+  // mobile: เลือกจากรายการใน bottom sheet → sheet ย่อลงเพื่อให้เห็นแผนที่และการ์ด (collapseKey ด้านล่าง)
   const selectFromList = (id: string) => {
     pickedFromList.current = id !== selectedId;
     setSelectedId(id);
-    if (window.matchMedia('(max-width: 639px)').matches) document.querySelector('main')?.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const mapPlaces = useMemo(() => filtered.map((p) => ({ ...p, selected: p.id === selectedId })), [filtered, selectedId]);
 
   return (
     <PageShell
-      tallMap
+      mobileSnap="half"
+      collapseKey={selectedId ?? (picked ? `${picked.lat},${picked.lng}` : null)}
       panel={
         <>
           <PanelHeader>
-            <SearchField label="ค้นหาชื่อสถานที่" placeholder="ค้นหาสถานที่…" value={q} onChange={(e) => setQ(e.target.value)} />
+            {/* มือถือ: ค้นหาใช้ช่องลอยบนแผนที่ (สถานที่ในระบบ + Google) จึงซ่อนช่องนี้ แสดงจำนวนแทน */}
+            <div className="flex min-w-0 flex-1 items-center max-md:hidden">
+              <SearchField label="ค้นหาชื่อสถานที่" placeholder="ค้นหาสถานที่…" value={q} onChange={(e) => setQ(e.target.value)} />
+            </div>
+            <div className="min-w-0 flex-1 text-title md:hidden">
+              สถานที่ <span className="font-normal text-muted tabular-nums">{filtered.length} แห่ง</span>
+            </div>
             {isAdmin && <IconButton icon="playlist_add" label="นำเข้าสถานที่แนะนำ" href="/places/import" />}
             {isAdmin && <IconButton icon="category" label="จัดการหมวดสถานที่" href="/places/categories" />}
             {isAdmin && <IconButton variant="primary" icon="add_location_alt" label="เพิ่มสถานที่" href="/places/new" />}
@@ -153,11 +196,46 @@ export default function PlacesPage() {
               setTarget({ lat: loc.lat, lng: loc.lng, zoom: 17, key: Date.now() });
             }}
           />
-          {picked && !selected && <PickedPointCard point={picked} canAdd={isAdmin} nearest={nearest} onClose={() => setPicked(null)} />}
+          {/* มือถือ (สไตล์ Google): ชิปหมวดใต้ช่องค้นหา */}
+          <div className="absolute left-0 right-[4.75rem] top-[64px] z-[1000] flex gap-2 overflow-x-auto px-3 pb-1 [scrollbar-width:none] md:hidden [&::-webkit-scrollbar]:hidden">
+            {categories.map((c) => {
+              const on = cats.includes(c.key);
+              return (
+                <button
+                  key={c.key}
+                  type="button"
+                  aria-pressed={on}
+                  onClick={() => setCats((cur) => (cur.includes(c.key) ? cur.filter((k) => k !== c.key) : [...cur, c.key]))}
+                  className={cn(
+                    'inline-flex h-11 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-[13px] font-medium shadow-overlay focus-visible:outline-none focus-visible:shadow-focus',
+                    on ? 'bg-brand text-white' : 'bg-surface text-ink',
+                  )}
+                >
+                  <span className="grid" style={on ? undefined : { color: c.color }}>
+                    <Icon name={c.icon} className="text-[17px]" />
+                  </span>
+                  {c.label}
+                </button>
+              );
+            })}
+          </div>
+          {picked && !selected && <PickedPointCard point={picked} canAdd={isAdmin} nearest={nearest} onAdd={openAdd} onClose={() => setPicked(null)} />}
+          {quick && (
+            <QuickPlaceDialog
+              init={quick}
+              onSaved={() => {
+                setQuick(null);
+                setPicked(null);
+                reload();
+              }}
+              onClose={() => setQuick(null)}
+            />
+          )}
           {selected && (
             <PlaceDetailCard
               place={selected}
               canEdit={isAdmin}
+              onEdit={() => openEdit(selected)}
               onClose={() => setSelectedId(null)}
               tripAction={
                 trip.loaded &&
