@@ -15,7 +15,7 @@ import { Select } from '@/components/ui/Select';
 import { useToast } from '@/components/ui/Toast';
 import { useCategories } from '@/components/CategoriesProvider';
 import { CategoryDialog } from '@/components/places/CategoryDialog';
-import { LAO_BOUNDS } from '@/lib/categories';
+import { validatePlace } from '@/lib/placeValidation';
 import { resolveRegion } from '@/lib/geocode';
 import { PROVINCES } from '@/lib/provinces';
 import { createCategory } from '@/lib/categoriesApi';
@@ -38,18 +38,6 @@ import type { CategoryKey } from '@/lib/types';
 import { usePlaces } from '@/lib/usePlaces';
 
 const MapView = dynamic(() => import('@/components/MapView'), { ssr: false });
-
-export function validatePlace(f: { name: string; lat: string; lng: string; duration: string; province: string }) {
-  const e: Record<string, string> = {};
-  if (!f.province) e.province = 'กรุณาเลือกแขวง';
-  const lat = parseFloat(f.lat), lng = parseFloat(f.lng);
-  if (!f.name.trim()) e.name = 'กรุณากรอกชื่อสถานที่';
-  if (isNaN(lat) || isNaN(lng)) e.coord = 'กรุณาระบุพิกัด หรือคลิกบนแผนที่';
-  else if (lat < LAO_BOUNDS.latMin || lat > LAO_BOUNDS.latMax || lng < LAO_BOUNDS.lngMin || lng > LAO_BOUNDS.lngMax)
-    e.coord = 'พิกัดอยู่นอกขอบเขต สปป.ลาว (ละติจูด 13.9–22.5, ลองจิจูด 100.0–107.7)';
-  if (f.duration && !(+f.duration > 0)) e.duration = 'เวลาแนะนำต้องมากกว่า 0';
-  return e;
-}
 
 interface FormState {
   name: string;
