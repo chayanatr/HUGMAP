@@ -4,6 +4,8 @@ import { guessProvince, matchProvince } from './provinces';
 export interface Region {
   province: string;
   district: string | null;
+  /** สถานที่ (POI/ร้าน/วัด ฯลฯ) ที่ Google พบตรงตำแหน่งนี้ ใช้ดึงชื่อสถานที่ — ไม่มี = จุดนั้นไม่ใช่สถานที่ที่มีชื่อ */
+  poiPlaceId?: string;
   /** true = เดาจากตำแหน่ง (ไม่ใช่ข้อมูลจากแผนที่) — ให้ผู้ใช้ตรวจสอบ */
   estimated: boolean;
 }
@@ -11,6 +13,7 @@ export interface Region {
 let geocodingDenied = false; // Geocoding API ยังไม่เปิด/ไม่อนุญาต → ไม่เรียกซ้ำจนกว่าจะรีโหลดหน้า
 
 type Component = { long_name: string; types: string[] };
+const POI_TYPES = ['point_of_interest', 'establishment', 'tourist_attraction', 'natural_feature', 'park', 'place_of_worship', 'airport'];
 
 /** ดึง province/district จากส่วนประกอบที่อยู่ของ Google (Geocoder: administrative_area_level_1 = แขวง, level_2/locality = เมือง) */
 export function regionFromComponents(components: { name: string; types: string[] }[]): { province: string | null; district: string | null } {
@@ -27,7 +30,8 @@ export async function resolveRegion(lat: number, lng: number): Promise<Region> {
       const { results } = await new Geocoder().geocode({ location: { lat, lng }, language: 'th' });
       const comps: Component[] = results?.[0]?.address_components ?? [];
       const { province, district } = regionFromComponents(comps.map((c) => ({ name: c.long_name, types: c.types })));
-      if (province) return { province, district, estimated: false };
+      const poiPlaceId = results?.find((r) => r.types?.some((t) => POI_TYPES.includes(t)))?.place_id;
+      if (province) return { province, district, poiPlaceId, estimated: false };
     } catch (e) {
       const code = (e as { code?: string })?.code;
       if (code === 'REQUEST_DENIED') geocodingDenied = true;

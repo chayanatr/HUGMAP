@@ -8,6 +8,7 @@ import { Pill } from '@/components/ui/Pill';
 import { useCategories } from '@/components/CategoriesProvider';
 import { NEARBY_FILTERS, RADIUS_OPTIONS_KM, hasUngrouped, type NearbyFilterKey } from '@/lib/categories';
 import { cn } from '@/lib/cn';
+import { useCollapsed } from '@/lib/useCollapsed';
 import { fmtDuration, fmtKm } from '@/lib/geo';
 import type { Endpoint, ScheduledStop, NearbyHit } from '@/lib/types';
 
@@ -80,14 +81,32 @@ export function NearbyBar({
   onAdd: (h: NearbyHit) => void;
 }) {
   const { cat } = useCategories();
+  const [collapsed, toggle] = useCollapsed('nearbybar');
   return (
     <div className="pointer-events-none absolute bottom-5 left-4 right-4 z-[1000] flex flex-col gap-2.5 max-md:hidden lg:right-[308px]">
       <div className="pointer-events-auto flex flex-wrap items-center gap-3">
-        <h2 className="rounded-input bg-surface/90 px-2.5 py-1 text-h2 shadow-overlay">ใกล้เส้นทาง · วันที่ {dayNo}</h2>
-        <RadiusTabs value={radiusKm} onChange={onRadius} />
-        <CategoryFilter value={filter} onChange={onFilter} />
+        <h2 className="rounded-input bg-surface/90 px-2.5 py-1 text-h2 shadow-overlay">
+          ใกล้เส้นทาง · วันที่ {dayNo}
+          {collapsed && <span className="ml-2 text-[13px] font-medium text-muted">{hits.length} แห่ง</span>}
+        </h2>
+        {!collapsed && (
+          <>
+            <RadiusTabs value={radiusKm} onChange={onRadius} />
+            <CategoryFilter value={filter} onChange={onFilter} />
+          </>
+        )}
+        <button
+          type="button"
+          onClick={toggle}
+          aria-expanded={!collapsed}
+          aria-label={collapsed ? 'แสดงรายการแนะนำ' : 'ซ่อนรายการแนะนำ'}
+          title={collapsed ? 'แสดงรายการแนะนำ' : 'ซ่อนรายการแนะนำ'}
+          className="grid h-8 w-8 place-items-center rounded-input bg-surface text-muted shadow-overlay hover:text-ink focus-visible:outline-none focus-visible:shadow-focus"
+        >
+          <Icon name={collapsed ? 'expand_less' : 'expand_more'} className="text-[20px]" />
+        </button>
       </div>
-      <div className="pointer-events-auto flex gap-2.5 overflow-x-auto pb-1">
+      <div className={cn('pointer-events-auto flex gap-2.5 overflow-x-auto pb-1', collapsed && 'hidden')}>
         {hits.length === 0 && <Card className="px-4 py-3 text-[13px] text-muted shadow-overlay">ไม่พบสถานที่ในรัศมี {radiusLabel(radiusKm)} ลองขยายรัศมี</Card>}
         {hits.map((h) => (
           <Card key={h.place.id} className="flex w-[250px] shrink-0 gap-2.5 p-2.5 shadow-overlay">
@@ -180,8 +199,33 @@ export function DesktopRouteCard({
 }) {
   const first = start ?? stops[0]?.place;
   const last = end ?? (stops.length > 1 ? stops[stops.length - 1].place : null);
+  const [collapsed, toggle] = useCollapsed('routecard');
+  if (collapsed)
+    return (
+      <button
+        type="button"
+        onClick={toggle}
+        aria-expanded={false}
+        aria-label="แสดงสรุปเส้นทางของวัน"
+        className="absolute bottom-5 right-4 z-[1000] flex items-center gap-2 rounded-card bg-dark px-3.5 py-2.5 text-[13px] font-semibold text-white shadow-dark focus-visible:outline-none focus-visible:shadow-focus max-lg:hidden"
+      >
+        <Icon name="route" className="text-[18px] text-brand-mint" />
+        วันที่ {dayNo} · {fmtDuration(travelMin)} ({fmtKm(km)})
+        <Icon name="expand_less" className="text-[18px]" />
+      </button>
+    );
   return (
     <DarkCard className="absolute bottom-5 right-4 z-[1000] flex w-[280px] flex-col gap-3 max-lg:hidden">
+      <button
+        type="button"
+        onClick={toggle}
+        aria-expanded
+        aria-label="ย่อสรุปเส้นทางของวัน"
+        title="ย่อ"
+        className="absolute right-1.5 top-1.5 grid h-8 w-8 place-items-center rounded-input text-dark-muted hover:text-white focus-visible:outline-none focus-visible:shadow-focus"
+      >
+        <Icon name="expand_more" className="text-[20px]" />
+      </button>
       <div className="flex items-center gap-3">
         <div className="grid h-[52px] w-[52px] shrink-0 place-items-center rounded-input bg-brand">
           <Icon name="route" className="text-[26px]" />
