@@ -3,7 +3,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Icon } from '@/components/ui/Icon';
 import { Input } from '@/components/ui/Input';
-import { CATEGORY_HUES, CATEGORY_ICONS, toCategoryDef, type CategoryRow } from '@/lib/categories';
+import { CATEGORY_HUES, CATEGORY_ICON_GROUPS, toCategoryDef, type CategoryRow } from '@/lib/categories';
 import type { CategoryInput } from '@/lib/categoriesApi';
 import { cn } from '@/lib/cn';
 
@@ -109,22 +109,29 @@ export function CategoryDialog({
 
         <fieldset className="flex flex-col gap-2">
           <legend className="mb-1 text-[12px] font-medium text-muted">ไอคอน</legend>
-          <div className="grid grid-cols-6 gap-1.5" role="group" aria-label="ไอคอน">
-            {CATEGORY_ICONS.map((name) => (
-              <button
-                key={name}
-                type="button"
-                aria-pressed={icon === name}
-                aria-label={name.replaceAll('_', ' ')}
-                title={name.replaceAll('_', ' ')}
-                onClick={() => setIcon(name)}
-                className={cn(
-                  'grid h-11 place-items-center rounded-input border text-[22px] text-ink focus-visible:outline-none focus-visible:shadow-focus',
-                  icon === name ? 'border-brand bg-brand-soft' : 'border-line-border bg-surface hover:bg-bg',
-                )}
-              >
-                <Icon name={name} />
-              </button>
+          <div className="flex max-h-[280px] flex-col gap-3 overflow-y-auto rounded-input border border-line-border p-2" role="group" aria-label="ไอคอน">
+            {CATEGORY_ICON_GROUPS.map((g) => (
+              <div key={g.label} className="flex flex-col gap-1.5">
+                <div className="text-label">{g.label}</div>
+                <div className="grid grid-cols-6 gap-1.5">
+                  {g.icons.map((name) => (
+                    <button
+                      key={name}
+                      type="button"
+                      aria-pressed={icon === name}
+                      aria-label={name.replaceAll('_', ' ')}
+                      title={name.replaceAll('_', ' ')}
+                      onClick={() => setIcon(name)}
+                      className={cn(
+                        'grid h-11 place-items-center rounded-input border text-[22px] text-ink focus-visible:outline-none focus-visible:shadow-focus',
+                        icon === name ? 'border-brand bg-brand-soft' : 'border-line-border bg-surface hover:bg-bg',
+                      )}
+                    >
+                      <Icon name={name} />
+                    </button>
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
         </fieldset>
