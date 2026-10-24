@@ -47,12 +47,50 @@ export const UNKNOWN_CATEGORY: CategoryDef = {
 };
 
 /** ไอคอนให้เลือกตอนสร้างหมวด (ชื่อ Material Symbols Rounded) */
-export const CATEGORY_ICONS = [
-  'place', 'temple_buddhist', 'restaurant', 'local_cafe', 'hotel', 'water', 'storefront', 'landscape', 'museum', 'redeem',
-  'local_bar', 'nightlife', 'spa', 'park', 'forest', 'hiking', 'kayaking', 'directions_boat', 'beach_access', 'attractions',
-  'celebration', 'theater_comedy', 'music_note', 'photo_camera', 'castle', 'account_balance', 'church', 'mosque', 'local_mall', 'shopping_bag',
-  'local_hospital', 'local_gas_station', 'flight', 'train', 'directions_bus', 'pedal_bike', 'sports_golf', 'fitness_center', 'school', 'pets',
+export const CATEGORY_ICON_GROUPS: { label: string; icons: string[] }[] = [
+  { label: 'ทั่วไป', icons: ['place', 'pin_drop', 'location_on', 'star', 'favorite', 'flag', 'bookmark', 'push_pin', 'info', 'help', 'verified', 'sell'] },
+  {
+    label: 'อาหาร/เครื่องดื่ม',
+    icons: [
+      'restaurant', 'local_cafe', 'local_bar', 'local_pizza', 'ramen_dining', 'lunch_dining', 'bakery_dining', 'icecream', 'cake', 'liquor',
+      'wine_bar', 'sports_bar', 'coffee', 'fastfood', 'set_meal', 'egg_alt', 'nightlife', 'kitchen',
+    ],
+  },
+  { label: 'ที่พัก', icons: ['hotel', 'bed', 'house', 'cottage', 'villa', 'apartment', 'holiday_village', 'camping', 'night_shelter', 'hot_tub', 'pool', 'room_service'] },
+  {
+    label: 'ธรรมชาติ/กิจกรรมกลางแจ้ง',
+    icons: [
+      'water', 'waterfall_chart', 'landscape', 'terrain', 'park', 'forest', 'nature', 'nature_people', 'filter_hdr', 'sunny',
+      'wb_twilight', 'beach_access', 'hiking', 'kayaking', 'surfing', 'sailing', 'scuba_diving', 'downhill_skiing', 'sports_handball', 'pets',
+      'cruelty_free', 'flutter_dash', 'grass', 'local_florist', 'volcano', 'rainy',
+    ],
+  },
+  {
+    label: 'วัฒนธรรม/ประวัติศาสตร์',
+    icons: ['temple_buddhist', 'temple_hindu', 'church', 'mosque', 'synagogue', 'castle', 'fort', 'museum', 'account_balance', 'history_edu', 'palette', 'brush', 'theater_comedy', 'festival', 'celebration', 'attractions', 'monument', 'stadium'],
+  },
+  {
+    label: 'ชอปปิง/บริการ',
+    icons: ['storefront', 'store', 'local_mall', 'shopping_bag', 'shopping_cart', 'redeem', 'local_grocery_store', 'checkroom', 'diamond', 'local_florist', 'spa', 'content_cut', 'local_laundry_service', 'local_pharmacy', 'local_atm', 'currency_exchange', 'payments', 'local_post_office'],
+  },
+  {
+    label: 'เดินทาง/ขนส่ง',
+    icons: [
+      'flight', 'flight_takeoff', 'train', 'subway', 'directions_bus', 'directions_car', 'local_taxi', 'two_wheeler', 'pedal_bike', 'directions_boat',
+      'directions_walk', 'local_gas_station', 'ev_station', 'local_parking', 'airport_shuttle', 'rv_hookup', 'sailing', 'traffic', 'luggage', 'commute',
+    ],
+  },
+  {
+    label: 'สุขภาพ/ความปลอดภัย',
+    icons: ['local_hospital', 'medical_services', 'health_and_safety', 'emergency', 'local_police', 'local_fire_department', 'wc', 'accessible', 'child_care', 'self_improvement', 'fitness_center', 'sports_golf'],
+  },
+  {
+    label: 'บันเทิง/อื่น ๆ',
+    icons: ['photo_camera', 'camera_alt', 'music_note', 'headphones', 'sports_esports', 'casino', 'movie', 'confirmation_number', 'school', 'work', 'business', 'wifi', 'phone_in_talk', 'info', 'sports_soccer', 'sports_basketball', 'pool', 'golf_course'],
+  },
 ];
+
+export const CATEGORY_ICONS = [...new Set(CATEGORY_ICON_GROUPS.flatMap((g) => g.icons))];
 
 /** สีให้เลือก (hue ของ oklch) */
 export const CATEGORY_HUES = [25, 45, 75, 110, 155, 185, 215, 260, 295, 320, 355, 0];
