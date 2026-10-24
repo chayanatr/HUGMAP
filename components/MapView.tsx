@@ -5,7 +5,8 @@ import { AdvancedMarker, AdvancedMarkerAnchorPoint, ControlPosition, Map, MapCon
 import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
 import { useCategories } from '@/components/CategoriesProvider';
 import { cn } from '@/lib/cn';
-import { fixMessage, geoErrorMessage, getMyPosition, type Fix } from '@/lib/geolocation';
+import { useLocationHelp } from '@/components/LocationHelp';
+import { fixMessage, getMyPosition, type Fix } from '@/lib/geolocation';
 import type { CategoryKey, Endpoint } from '@/lib/types';
 import { Icon } from '@/components/ui/Icon';
 import { useToast } from '@/components/ui/Toast';
@@ -99,6 +100,7 @@ function Dot({ size, className, style, children }: { size: number; className?: s
 function MyLocation() {
   const map = useMap();
   const toast = useToast();
+  const { handleError } = useLocationHelp();
   const [status, setStatus] = useState<'idle' | 'loading' | 'active'>('idle');
   const [me, setMe] = useState<Fix | null>(null);
 
@@ -130,7 +132,7 @@ function MyLocation() {
       toast(fixMessage(fix), fix.accuracy > 100 ? 'error' : 'success');
     } catch (e) {
       setStatus(me ? 'active' : 'idle');
-      toast(geoErrorMessage(e), 'error');
+      handleError(e, locate); // ถูกปฏิเสธสิทธิ์ → หน้าต่างวิธีเปิดสิทธิ์ตำแหน่ง (ลองอีกครั้งได้)
     }
   }
 

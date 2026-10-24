@@ -37,7 +37,7 @@ export default function AccountPage() {
               <div className="mt-1">{role && <Pill tone={role === 'admin' ? 'brand' : 'success'}>{ROLE_LABEL[role]}</Pill>}</div>
             </div>
             <p className="text-[12px] leading-[1.6] text-placeholder">
-              {role === 'admin' ? 'จัดการสถานที่และจัดเส้นทางได้' : 'จัดเส้นทางได้ (การเพิ่ม/แก้ไขสถานที่เป็นสิทธิ์ของผู้ดูแลระบบ)'}
+              {role === 'admin' ? 'จัดการสถานที่และจัดทริปได้' : 'จัดทริปได้ (การเพิ่ม/แก้ไขสถานที่เป็นสิทธิ์ของผู้ดูแลระบบ)'}
             </p>
           </>
         )}

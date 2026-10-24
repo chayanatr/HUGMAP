@@ -38,15 +38,12 @@ export function PickedPointCard({
   point,
   canAdd,
   nearest,
-  onAdd,
   onClose,
 }: {
   point: PickedPoint;
   canAdd: boolean;
   /** สถานที่ที่บันทึกไว้ใกล้ที่สุด (กันเพิ่มซ้ำ) */
   nearest?: { name: string; km: number } | null;
-  /** กดแล้วเปิดฟอร์มเพิ่มสถานที่ (กรอกรายละเอียดบนหน้านี้) */
-  onAdd: () => void;
   onClose: () => void;
 }) {
   return (
@@ -66,7 +63,7 @@ export function PickedPointCard({
         <IconButton icon="close" label="ปิด" onClick={onClose} className="!h-11 !w-11 border-0" />
       </div>
       {canAdd ? (
-        <Button onClick={onAdd} icon="add_location_alt" className="w-full">
+        <Button href={newPlaceHref(point)} icon="add_location_alt" className="w-full">
           เพิ่มสถานที่ที่นี่
         </Button>
       ) : (

@@ -70,7 +70,7 @@ export function SummaryView({
               <Image src="/brand/huglao-emblem.png" alt="HUGLAO" width={40} height={40} unoptimized className="h-10 w-10" />
               <span className="rounded-[8px] bg-brand-soft px-2.5 py-1 text-[12px] font-semibold tabular-nums text-brand-hover">{trip.code}</span>
               <span className="text-[13px] text-placeholder">
-                <b className="font-bold tracking-[.04em] text-brand-hover">HUGMAP</b> · สรุปเส้นทาง
+                <b className="font-bold tracking-[.04em] text-brand-hover">HUGMAP</b> · Trip
               </span>
             </>
           ) : (

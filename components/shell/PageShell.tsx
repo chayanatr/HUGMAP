@@ -99,6 +99,10 @@ export function PageShell({
     <div ref={root} className="relative h-full overflow-hidden md:flex md:flex-row">
       <aside
         style={sheetStyle}
+        // มือถือ: โฟกัสช่องกรอกใน sheet (เช่น ค้นหาสถานที่เพิ่ม ฟอร์ม) → ขยายเต็มเพื่อไม่ให้คีย์บอร์ดบังช่องและรายการผลลัพธ์
+        onFocusCapture={(e) => {
+          if ((e.target as HTMLElement).matches('input, textarea, select') && window.matchMedia('(max-width: 639px)').matches) setSnap('full');
+        }}
         className={cn(
           'flex flex-col border-line bg-panel',
           // mobile: bottom sheet

@@ -3,6 +3,7 @@ import { Anuphan } from 'next/font/google';
 import './globals.css';
 import { AppFrame } from '@/components/AppFrame';
 import { CategoriesProvider } from '@/components/CategoriesProvider';
+import { LocationHelpProvider } from '@/components/LocationHelp';
 import { AuthProvider } from '@/lib/auth';
 import { ToastProvider } from '@/components/ui/Toast';
 
@@ -20,9 +21,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="bg-bg text-ink font-sans antialiased">
         <AuthProvider>
           <ToastProvider>
-            <CategoriesProvider>
-              <AppFrame>{children}</AppFrame>
-            </CategoriesProvider>
+            <LocationHelpProvider>
+              <CategoriesProvider>
+                <AppFrame>{children}</AppFrame>
+              </CategoriesProvider>
+            </LocationHelpProvider>
           </ToastProvider>
         </AuthProvider>
       </body>

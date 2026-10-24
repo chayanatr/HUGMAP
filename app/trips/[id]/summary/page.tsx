@@ -47,7 +47,7 @@ export default function TripSummaryPage({ params }: { params: { id: string } }) 
     <div className="mx-auto max-w-[1120px] p-4 md:p-7">
       <Card className="flex flex-col items-start gap-3 p-4">
         <p className="text-[14px] leading-[1.6] text-muted" role={failed ? 'alert' : undefined}>
-          {status === 'missing' ? 'ไม่พบทริปนี้ อาจถูกลบไปแล้ว' : failed ? 'โหลดข้อมูลสรุปไม่สำเร็จ' : 'กำลังโหลดสรุปเส้นทาง…'}
+          {status === 'missing' ? 'ไม่พบทริปนี้ อาจถูกลบไปแล้ว' : failed ? 'โหลดข้อมูลสรุปไม่สำเร็จ' : 'กำลังโหลด Trip…'}
         </p>
         {failed && status !== 'missing' && (
           <Button variant="outline" icon="refresh" onClick={reload}>

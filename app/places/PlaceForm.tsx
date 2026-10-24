@@ -20,7 +20,8 @@ import { resolveRegion } from '@/lib/geocode';
 import { PROVINCES } from '@/lib/provinces';
 import { createCategory } from '@/lib/categoriesApi';
 import { cn } from '@/lib/cn';
-import { fixMessage, geoErrorMessage, getMyPosition } from '@/lib/geolocation';
+import { useLocationHelp } from '@/components/LocationHelp';
+import { fixMessage, getMyPosition } from '@/lib/geolocation';
 import { prepareImage } from '@/lib/images';
 import {
   PHOTO_MAX_BYTES,
@@ -60,6 +61,7 @@ type LoadState = 'loading' | 'ready' | 'missing' | 'error';
 export default function PlaceForm({ placeId }: { placeId?: string }) {
   const router = useRouter();
   const toast = useToast();
+  const { handleError: handleGeoError } = useLocationHelp();
   const editing = !!placeId;
   const { places, status: placesStatus } = usePlaces();
   const { list: categories, reload: reloadCategories } = useCategories();
@@ -247,7 +249,7 @@ export default function PlaceForm({ placeId }: { placeId?: string }) {
       pick(fix.lat, fix.lng);
       toast(fixMessage(fix), fix.accuracy > 100 ? 'error' : 'success');
     } catch (e) {
-      toast(geoErrorMessage(e), 'error');
+      handleGeoError(e, fillFromGps);
     } finally {
       setLocating(false);
     }
