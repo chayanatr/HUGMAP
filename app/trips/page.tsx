@@ -8,7 +8,8 @@ import { Card } from '@/components/ui/Card';
 import { Icon } from '@/components/ui/Icon';
 import { useToast } from '@/components/ui/Toast';
 import { fmtThaiRange } from '@/lib/format';
-import { createTrip, fetchTrips, type TripListItem } from '@/lib/trips';
+import type { Trip } from '@/lib/types';
+import { createTrip, deleteTrip, fetchTrips, type TripListItem } from '@/lib/trips';
 
 export default function TripsPage() {
   const router = useRouter();
@@ -16,6 +17,7 @@ export default function TripsPage() {
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [items, setItems] = useState<TripListItem[]>([]);
   const [creating, setCreating] = useState(false);
+  const [deleting, setDeleting] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setStatus('loading');
@@ -41,6 +43,22 @@ export default function TripsPage() {
     } catch {
       toast('สร้างทริปใหม่ไม่สำเร็จ กรุณาลองอีกครั้ง', 'error');
       setCreating(false);
+    }
+  }
+
+  async function remove(trip: Trip) {
+    if (deleting) return;
+    const shared = trip.share_token ? '\nลิงก์ที่แชร์ให้ลูกค้าจะเปิดดูไม่ได้อีก' : '';
+    if (!window.confirm(`ลบทริป ${trip.code} “${trip.name}” ?\nวันและจุดแวะทั้งหมดของทริปนี้จะถูกลบ และไม่สามารถย้อนกลับได้${shared}`)) return;
+    setDeleting(trip.id);
+    try {
+      await deleteTrip(trip.id);
+      setItems((cur) => cur.filter((x) => x.trip.id !== trip.id));
+      toast(`ลบทริป ${trip.code} แล้ว`);
+    } catch {
+      toast('ลบทริปไม่สำเร็จ กรุณาลองอีกครั้ง', 'error');
+    } finally {
+      setDeleting(null);
     }
   }
 
@@ -72,10 +90,10 @@ export default function TripsPage() {
       {status === 'ready' && items.length > 0 && (
         <ul className="grid gap-3 md:grid-cols-2">
           {items.map(({ trip, dayCount }, i) => (
-            <li key={trip.id}>
+            <li key={trip.id} className="relative">
               <Link
                 href={`/trips/${trip.id}`}
-                className="flex min-h-[44px] flex-col gap-2 rounded-card bg-surface p-4 shadow-card transition-colors hover:bg-bg focus-visible:outline-none focus-visible:shadow-focus"
+                className="flex min-h-[44px] flex-col gap-2 rounded-card bg-surface p-4 pr-16 shadow-card transition-colors hover:bg-bg focus-visible:outline-none focus-visible:shadow-focus"
               >
                 <div className="flex items-center gap-2">
                   <span className="text-label">{trip.code}</span>
@@ -86,13 +104,22 @@ export default function TripsPage() {
                       แชร์ลิงก์แล้ว
                     </span>
                   )}
-                  <Icon name="chevron_right" className="ml-auto text-[20px] text-muted" />
                 </div>
                 <div className="text-title">{trip.name}</div>
                 <div className="text-value text-muted">
                   {trip.client_name} · {trip.pax} คน · {dayCount} วัน · {fmtThaiRange(trip.start_date, dayCount)}
                 </div>
               </Link>
+              <button
+                type="button"
+                onClick={() => remove(trip)}
+                disabled={deleting === trip.id}
+                aria-label={`ลบทริป ${trip.code}`}
+                title="ลบทริป"
+                className="absolute right-3 top-3 grid h-11 w-11 place-items-center rounded-item text-danger-text hover:bg-danger-soft focus-visible:outline-none focus-visible:shadow-focus disabled:opacity-50"
+              >
+                <Icon name="delete" className="text-[22px]" />
+              </button>
             </li>
           ))}
         </ul>
