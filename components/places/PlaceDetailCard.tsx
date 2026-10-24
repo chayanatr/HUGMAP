@@ -14,14 +14,11 @@ export function PlaceDetailCard({
   place,
   onClose,
   canEdit,
-  onEdit,
   tripAction,
 }: {
   place: Place;
   onClose: () => void;
   canEdit?: boolean;
-  /** กดแล้วเปิดฟอร์มแก้ไขบนหน้านี้ (ไม่ส่ง = ลิงก์ไปฟอร์มเต็ม) */
-  onEdit?: () => void;
   tripAction?: ReactNode;
 }) {
   const c = useCategories().cat(place.category);
@@ -73,16 +70,11 @@ export function PlaceDetailCard({
       <div className="rounded-input bg-dark-field px-3 py-2 text-[12px] leading-[1.6]">{info}</div>
       {place.description && <p className="line-clamp-3 text-[13px] leading-[1.6] text-dark-soft">{place.description}</p>}
       <div className="flex gap-2">
-        {canEdit &&
-          (onEdit ? (
-            <Button variant="dark-outline" icon="edit" onClick={onEdit}>
-              แก้ไข
-            </Button>
-          ) : (
-            <Button variant="dark-outline" icon="edit" href={`/places/${place.id}/edit`}>
-              แก้ไข
-            </Button>
-          ))}
+        {canEdit && (
+          <Button variant="dark-outline" icon="edit" href={`/places/${place.id}/edit`}>
+            แก้ไข
+          </Button>
+        )}
         {tripAction}
       </div>
       {place.photos.length > 0 && <PhotoGallery photos={place.photos} name={place.name} open={galleryOpen} onClose={() => setGalleryOpen(false)} />}

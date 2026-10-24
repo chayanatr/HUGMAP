@@ -9,7 +9,6 @@ import { PlaceCard } from '@/components/places/PlaceCard';
 import { PlaceDetailCard } from '@/components/places/PlaceDetailCard';
 import { PlaceFilters } from '@/components/places/PlaceFilters';
 import { PickedPointCard, nearestSaved, type PickedPoint } from '@/components/places/PickedPointCard';
-import { QuickPlaceDialog, type QuickPlaceInit } from '@/components/places/QuickPlaceDialog';
 import { useCategories } from '@/components/CategoriesProvider';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -21,7 +20,7 @@ import { cn } from '@/lib/cn';
 import { resolvePlaceId } from '@/lib/placesSearch';
 import { useCurrentTrip } from '@/lib/useCurrentTrip';
 import { usePlaces } from '@/lib/usePlaces';
-import type { CategoryKey, Place } from '@/lib/types';
+import type { CategoryKey } from '@/lib/types';
 
 const MapView = dynamic(() => import('@/components/MapView'), { ssr: false });
 
@@ -44,23 +43,6 @@ export default function PlacesPage() {
 
   // เพิ่ม/แก้ไขสถานที่แบบเร็วบนหน้านี้ (กดปุ่มที่การ์ด → ฟอร์มกรอกรายละเอียดเปิดขึ้นทันที)
   const { list: categories } = useCategories();
-  const [quick, setQuick] = useState<QuickPlaceInit | null>(null);
-  const openEdit = (p: Place) =>
-    setQuick({
-      id: p.id,
-      photos: p.photos,
-      name: p.name,
-      category: p.category,
-      province: p.province,
-      district: p.district ?? '',
-      lat: p.lat,
-      lng: p.lng,
-      open: p.open_hours ?? '',
-      fee: p.fee ?? '',
-      duration: String(p.duration_min),
-      desc: p.description ?? '',
-      fullFormHref: `/places/${p.id}/edit`,
-    });
 
   const pickPoint = (lat: number, lng: number, placeId?: string) => {
     const seq = ++pickSeq.current;
@@ -202,22 +184,10 @@ export default function PlacesPage() {
             })}
           </div>
           {picked && !selected && <PickedPointCard point={picked} canAdd={isAdmin} nearest={nearest} onClose={() => setPicked(null)} />}
-          {quick && (
-            <QuickPlaceDialog
-              init={quick}
-              onSaved={() => {
-                setQuick(null);
-                setPicked(null);
-                reload();
-              }}
-              onClose={() => setQuick(null)}
-            />
-          )}
           {selected && (
             <PlaceDetailCard
               place={selected}
               canEdit={isAdmin}
-              onEdit={() => openEdit(selected)}
               onClose={() => setSelectedId(null)}
               tripAction={
                 trip.loaded &&
