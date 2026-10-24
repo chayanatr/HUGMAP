@@ -162,6 +162,13 @@ export async function createTrip(): Promise<Trip> {
   throw new Error('สร้างรหัสทริปไม่สำเร็จ');
 }
 
+/** ลบทริป (วันและจุดแวะถูกลบตามด้วย cascade) — ลิงก์ลูกค้าของทริปนี้ใช้ไม่ได้อีก */
+export async function deleteTrip(id: string) {
+  const { data, error } = await supabase().from('trips').delete().eq('id', id).select('id');
+  if (error) throw error;
+  if (!data?.length) throw new Error('ไม่มีสิทธิ์ลบทริปนี้หรือทริปถูกลบไปแล้ว');
+}
+
 export async function updateTrip(
   id: string,
   patch: Partial<Pick<Trip, 'name' | 'client_name' | 'pax' | 'start_date' | 'day_start_min' | 'share_token' | 'subtitle' | 'lodging_note' | 'footer_note'>>,

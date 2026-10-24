@@ -1,9 +1,10 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { useToast } from '@/components/ui/Toast';
 import { buildBackup, downloadFile, lastBackupAt, markBackup, placesCsv, stampName } from '@/lib/backup';
+import { parseBackup, RestoreError, restoreBackup } from '@/lib/restore';
 
 const STALE_DAYS = 30;
 
@@ -12,6 +13,8 @@ export function BackupCard() {
   const toast = useToast();
   const [busy, setBusy] = useState<'json' | 'csv' | null>(null);
   const [last, setLast] = useState<Date | null>(null);
+  const [restoring, setRestoring] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
   useEffect(() => setLast(lastBackupAt()), []);
 
   async function run(kind: 'json' | 'csv') {
@@ -28,6 +31,27 @@ export function BackupCard() {
       toast('ส่งออกไม่สำเร็จ กรุณาลองอีกครั้ง', 'error');
     } finally {
       setBusy(null);
+    }
+  }
+
+  async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file || restoring) return;
+    try {
+      const b = parseBackup(await file.text());
+      const when = new Date(b.exported_at).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' });
+      const ok = window.confirm(
+        `นำเข้าไฟล์สำรองเมื่อ ${when}?\nสถานที่ ${b.counts.places} · ทริป ${b.counts.trips} · หมวด ${b.counts.categories}\n\nระบบจะเพิ่มข้อมูลที่ไม่มี และอัปเดตข้อมูลที่มี id ตรงกัน (ข้อมูลในไฟล์จะทับของเดิม) โดยไม่ลบข้อมูลอื่น`,
+      );
+      if (!ok) return;
+      setRestoring('กำลังเริ่ม…');
+      const r = await restoreBackup(b, (label, d, t) => setRestoring(`กำลังนำเข้า${label}… ${d}/${t}`));
+      toast(`นำเข้าแล้ว · สถานที่ ${r.places} · ทริป ${r.trips} · หมวด ${r.categories}`);
+    } catch (err) {
+      toast(err instanceof RestoreError ? err.message : 'นำเข้าไม่สำเร็จ กรุณาลองอีกครั้ง', 'error');
+    } finally {
+      setRestoring(null);
     }
   }
 
@@ -49,6 +73,16 @@ export function BackupCard() {
         </Button>
         <Button variant="outline" icon="table_view" onClick={() => run('csv')} disabled={!!busy}>
           {busy === 'csv' ? 'กำลังเตรียมไฟล์…' : 'สถานที่เป็น CSV (Excel)'}
+        </Button>
+      </div>
+      <div className="flex flex-col gap-2 border-t border-line pt-3">
+        <h3 className="text-[14px] font-semibold">นำเข้าข้อมูลสำรอง</h3>
+        <p className="text-[13px] leading-[1.6] text-muted">
+          เลือกไฟล์สำรอง (JSON) ที่ดาวน์โหลดไว้เพื่อนำกลับเข้าระบบ ระบบจะเพิ่ม/อัปเดตข้อมูลตาม id ของแต่ละรายการ และไม่ลบข้อมูลที่มีอยู่ นำเข้าซ้ำได้
+        </p>
+        <input ref={fileRef} type="file" accept="application/json,.json" onChange={onFile} className="hidden" />
+        <Button variant="outline" icon="upload" onClick={() => fileRef.current?.click()} disabled={!!busy || !!restoring} className="self-start">
+          {restoring ?? 'เลือกไฟล์สำรองเพื่อนำเข้า'}
         </Button>
       </div>
     </Card>
