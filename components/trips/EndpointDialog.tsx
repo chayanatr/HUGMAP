@@ -7,7 +7,8 @@ import { Input, Textarea } from '@/components/ui/Input';
 import { useToast } from '@/components/ui/Toast';
 import { useCategories } from '@/components/CategoriesProvider';
 import { cn } from '@/lib/cn';
-import { geoErrorMessage, getMyPosition } from '@/lib/geolocation';
+import { useLocationHelp } from '@/components/LocationHelp';
+import { getMyPosition } from '@/lib/geolocation';
 import type { Endpoint, Place } from '@/lib/types';
 
 export type EndpointKind = 'start' | 'end';
@@ -55,6 +56,7 @@ export function EndpointDialog({
   const ref = useRef<HTMLDialogElement>(null);
   const toast = useToast();
   const { cat } = useCategories();
+  const { handleError: handleGeoError } = useLocationHelp();
   const [gps, setGps] = useState(false);
   const [showErrors, setShowErrors] = useState(false);
 
@@ -85,7 +87,7 @@ export function EndpointDialog({
       const fix = await getMyPosition();
       onChange({ ...draft, name: draft.name.trim() || DEFAULT_NAME[kind], lat: fix.lat, lng: fix.lng });
     } catch (e) {
-      toast(geoErrorMessage(e), 'error');
+      handleGeoError(e, useGps);
     } finally {
       setGps(false);
     }

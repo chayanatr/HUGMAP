@@ -66,7 +66,7 @@ export default function TripsPage() {
       )}
       {status === 'ready' && items.length === 0 && (
         <Card className="flex flex-col items-start gap-3 p-4">
-          <p className="text-[14px] leading-[1.6] text-muted">ยังไม่มีทริป กดปุ่ม &ldquo;สร้างทริปใหม่&rdquo; เพื่อเริ่มจัดเส้นทาง</p>
+          <p className="text-[14px] leading-[1.6] text-muted">ยังไม่มีทริป กดปุ่ม &ldquo;สร้างทริปใหม่&rdquo; เพื่อเริ่มจัดทริป</p>
         </Card>
       )}
       {status === 'ready' && items.length > 0 && (

@@ -249,8 +249,27 @@ export function DesktopRouteCard({
         href={summaryHref}
         className="flex h-11 items-center justify-center rounded-input bg-surface text-[14px] font-semibold text-brand-deep hover:bg-brand-soft focus-visible:outline-none focus-visible:shadow-focus"
       >
-        ดูสรุปเส้นทาง
+        ดู Trip
       </Link>
     </DarkCard>
+  );
+}
+
+/** มือถือ: แถบสรุปของวันบนแผนที่ (แทนการ์ดสรุปที่ซ่อนบนจอเล็ก) แตะเพื่อไปดู Trip */
+export function MobileRouteBar({ dayNo, stops, travelMin, km, summaryHref }: { dayNo: number; stops: ScheduledStop[]; travelMin: number; km: number; summaryHref: string }) {
+  return (
+    <Link
+      href={summaryHref}
+      className="absolute left-3 right-[4.75rem] top-3 z-[1000] flex h-11 items-center gap-2 rounded-input bg-dark px-3 text-[13px] font-semibold text-white shadow-dark focus-visible:outline-none focus-visible:shadow-focus md:hidden"
+    >
+      <Icon name="route" className="shrink-0 text-[18px] text-brand-mint" />
+      <span className="min-w-0 truncate">
+        วันที่ {dayNo} · {stops.length} จุด · {fmtDuration(travelMin)} ({fmtKm(km)})
+      </span>
+      <span className="ml-auto flex shrink-0 items-center text-brand-mint">
+        ดู Trip
+        <Icon name="chevron_right" className="text-[18px]" />
+      </span>
+    </Link>
   );
 }

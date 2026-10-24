@@ -8,7 +8,7 @@ import { SearchField } from '@/components/shell/SearchField';
 import { PlaceCard } from '@/components/places/PlaceCard';
 import { PlaceDetailCard } from '@/components/places/PlaceDetailCard';
 import { PlaceFilters } from '@/components/places/PlaceFilters';
-import { PickedPointCard, nearestSaved, newPlaceHref, type PickedPoint } from '@/components/places/PickedPointCard';
+import { PickedPointCard, nearestSaved, type PickedPoint } from '@/components/places/PickedPointCard';
 import { QuickPlaceDialog, type QuickPlaceInit } from '@/components/places/QuickPlaceDialog';
 import { useCategories } from '@/components/CategoriesProvider';
 import { Button } from '@/components/ui/Button';
@@ -18,7 +18,7 @@ import { IconButton } from '@/components/ui/IconButton';
 import { useToast } from '@/components/ui/Toast';
 import { useAuth } from '@/lib/auth';
 import { cn } from '@/lib/cn';
-import { guessCategoryFromGoogle, resolvePlaceId } from '@/lib/placesSearch';
+import { resolvePlaceId } from '@/lib/placesSearch';
 import { useCurrentTrip } from '@/lib/useCurrentTrip';
 import { usePlaces } from '@/lib/usePlaces';
 import type { CategoryKey, Place } from '@/lib/types';
@@ -45,23 +45,6 @@ export default function PlacesPage() {
   // เพิ่ม/แก้ไขสถานที่แบบเร็วบนหน้านี้ (กดปุ่มที่การ์ด → ฟอร์มกรอกรายละเอียดเปิดขึ้นทันที)
   const { list: categories } = useCategories();
   const [quick, setQuick] = useState<QuickPlaceInit | null>(null);
-  const openAdd = () => {
-    if (!picked) return;
-    const guessed = picked.types ? guessCategoryFromGoogle(picked.types) : null;
-    setQuick({
-      name: picked.name ?? '',
-      category: guessed && categories.some((c) => c.key === guessed) ? guessed : (categories[0]?.key ?? 'temple'),
-      province: picked.province ?? '',
-      district: picked.district ?? '',
-      lat: picked.lat,
-      lng: picked.lng,
-      open: '',
-      fee: '',
-      duration: '30',
-      desc: picked.address ?? '',
-      fullFormHref: newPlaceHref(picked),
-    });
-  };
   const openEdit = (p: Place) =>
     setQuick({
       id: p.id,
@@ -131,7 +114,6 @@ export default function PlacesPage() {
             <div className="min-w-0 flex-1 text-title md:hidden">
               สถานที่ <span className="font-normal text-muted tabular-nums">{filtered.length} แห่ง</span>
             </div>
-            {isAdmin && <IconButton icon="playlist_add" label="นำเข้าสถานที่แนะนำ" href="/places/import" />}
             {isAdmin && <IconButton icon="category" label="จัดการหมวดสถานที่" href="/places/categories" />}
             {isAdmin && <IconButton variant="primary" icon="add_location_alt" label="เพิ่มสถานที่" href="/places/new" />}
           </PanelHeader>
@@ -183,7 +165,7 @@ export default function PlacesPage() {
           <MapSearch
             places={places}
             request={searchRequest}
-            className="absolute left-3 top-3 z-[1000] w-[calc(100%-4.75rem)] md:w-[360px]"
+            className="absolute left-3 top-3 z-[1010] w-[calc(100%-4.75rem)] md:w-[360px]"
             onSelectSaved={(p) => {
               setPicked(null);
               setSelectedId(p.id);
@@ -196,8 +178,8 @@ export default function PlacesPage() {
               setTarget({ lat: loc.lat, lng: loc.lng, zoom: 17, key: Date.now() });
             }}
           />
-          {/* มือถือ (สไตล์ Google): ชิปหมวดใต้ช่องค้นหา */}
-          <div className="absolute left-0 right-[4.75rem] top-[64px] z-[1000] flex gap-2 overflow-x-auto px-3 pb-1 [scrollbar-width:none] md:hidden [&::-webkit-scrollbar]:hidden">
+          {/* ชิปหมวดสไตล์ Google: มือถือ/แท็บเล็ตอยู่ใต้ช่องค้นหา, เดสก์ท็อปอยู่ข้างช่องค้นหา */}
+          <div className="absolute left-0 right-[4.75rem] top-[60px] z-[1000] flex gap-1.5 overflow-x-auto px-3 pb-1 [scrollbar-width:none] lg:left-[384px] lg:top-3 lg:px-0 [&::-webkit-scrollbar]:hidden">
             {categories.map((c) => {
               const on = cats.includes(c.key);
               return (
@@ -207,19 +189,19 @@ export default function PlacesPage() {
                   aria-pressed={on}
                   onClick={() => setCats((cur) => (cur.includes(c.key) ? cur.filter((k) => k !== c.key) : [...cur, c.key]))}
                   className={cn(
-                    'inline-flex h-11 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-[13px] font-medium shadow-overlay focus-visible:outline-none focus-visible:shadow-focus',
+                    'inline-flex h-9 shrink-0 items-center gap-1 rounded-full px-3 text-[12px] font-medium shadow-overlay focus-visible:outline-none focus-visible:shadow-focus md:text-[13px]',
                     on ? 'bg-brand text-white' : 'bg-surface text-ink',
                   )}
                 >
                   <span className="grid" style={on ? undefined : { color: c.color }}>
-                    <Icon name={c.icon} className="text-[17px]" />
+                    <Icon name={c.icon} className="text-[16px]" />
                   </span>
                   {c.label}
                 </button>
               );
             })}
           </div>
-          {picked && !selected && <PickedPointCard point={picked} canAdd={isAdmin} nearest={nearest} onAdd={openAdd} onClose={() => setPicked(null)} />}
+          {picked && !selected && <PickedPointCard point={picked} canAdd={isAdmin} nearest={nearest} onClose={() => setPicked(null)} />}
           {quick && (
             <QuickPlaceDialog
               init={quick}

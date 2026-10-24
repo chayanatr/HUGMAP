@@ -7,7 +7,7 @@ import { PageShell, PanelBody, PanelHeader } from '@/components/shell/PageShell'
 import { AddPlaceSearch } from '@/components/trips/AddPlaceSearch';
 import { EndpointDialog, KIND_LABEL, type EndpointDraft, type EndpointKind } from '@/components/trips/EndpointDialog';
 import { StopDialog } from '@/components/trips/StopDialog';
-import { DesktopRouteCard, NearbyBar, NearbyPanelCard } from '@/components/trips/Nearby';
+import { DesktopRouteCard, MobileRouteBar, NearbyBar, NearbyPanelCard } from '@/components/trips/Nearby';
 import { StopList } from '@/components/trips/StopList';
 import { TripCard } from '@/components/trips/TripCard';
 import { TripSettingsDialog } from '@/components/trips/TripSettingsDialog';
@@ -150,7 +150,7 @@ export default function TripPlannerPage({ params }: { params: { id: string } }) 
                 <NearbyPanelCard dayNo={day.dayNo} hits={hits} radiusKm={radiusKm} onRadius={planner.setRadiusKm} filter={planner.nearbyFilter} onFilter={planner.setNearbyFilter} onAdd={(h) => actions.addPlace(h.place, h.segment + 1)} />
 
                 <Button href={summaryHref} iconAfter="arrow_forward" className="!h-12 w-full lg:hidden">
-                  ดูสรุปเส้นทาง
+                  ดู Trip
                 </Button>
               </>
             )}
@@ -228,6 +228,7 @@ export default function TripPlannerPage({ params }: { params: { id: string } }) 
           {day && (
             <>
               <NearbyBar dayNo={day.dayNo} hits={hits} radiusKm={radiusKm} onRadius={planner.setRadiusKm} filter={planner.nearbyFilter} onFilter={planner.setNearbyFilter} onAdd={(h) => actions.addPlace(h.place, h.segment + 1)} />
+              <MobileRouteBar dayNo={day.dayNo} stops={sched.stops} travelMin={sched.travelMin} km={sched.km} summaryHref={summaryHref} />
               <DesktopRouteCard dayNo={day.dayNo} stops={sched.stops} travelMin={sched.travelMin} km={sched.km} summaryHref={summaryHref} start={day.start} end={day.end} />
             </>
           )}

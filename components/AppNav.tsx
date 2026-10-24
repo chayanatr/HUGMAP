@@ -6,8 +6,8 @@ import { useAuth } from '@/lib/auth';
 
 const NAV = [
   { href: '/places', label: 'แผนที่สถานที่', short: 'สถานที่', icon: 'map' },
-  { href: '/trips/current', label: 'จัดเส้นทาง', short: 'เส้นทาง', icon: 'route' },
-  { href: '/trips/current/summary', label: 'สรุปเส้นทาง', short: 'สรุป', icon: 'description' },
+  { href: '/trips/current', label: 'จัดทริป', short: 'จัดทริป', icon: 'route' },
+  { href: '/trips/current/summary', label: 'Trip', short: 'Trip', icon: 'description' },
   { href: '/places/new', label: 'เพิ่มสถานที่', short: 'เพิ่ม', icon: 'add_location_alt', adminOnly: true },
 ];
 const ACCOUNT = { href: '/account', label: 'บัญชีของฉัน', short: 'บัญชี', icon: 'account_circle' };
